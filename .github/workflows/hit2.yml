@@ -1,0 +1,176 @@
+name: HIT2 — Browser Factory Cross-Browser
+
+on:
+  push:
+    paths:
+      - 'HIT2/**'
+      - '.github/workflows/hit2.yml'
+  pull_request:
+    paths:
+      - 'HIT2/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: HIT2
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1. Secret detection
+  # ────────────────────────────────────────────────────────────────────────────
+  gitleaks:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2. Tests unitarios de BrowserOptions (sin browser real)
+  # ────────────────────────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (BrowserOptions)
+    runs-on: ubuntu-latest
+    needs: gitleaks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: HIT2/package-lock.json
+      - run: npm ci
+      - run: npm run test:unit
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 3. Scraping + tests de integración — Chrome
+  # ────────────────────────────────────────────────────────────────────────────
+  test-chrome:
+    name: Integration Tests — Chrome
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: HIT2/package-lock.json
+      - run: npm ci
+      - uses: browser-actions/setup-chrome@v1
+      - name: Scrape Chrome (headless)
+        run: npm run scrape:chrome:headless
+      - name: Tests Chrome
+        run: npm run test:chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artifacts-chrome
+          path: |
+            HIT2/results/
+            HIT2/screenshots/
+            HIT2/logs/
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 4. Scraping + tests de integración — Firefox
+  # ────────────────────────────────────────────────────────────────────────────
+  test-firefox:
+    name: Integration Tests — Firefox
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: HIT2/package-lock.json
+      - run: npm ci
+      - uses: browser-actions/setup-firefox@v1
+      - uses: browser-actions/setup-geckodriver@latest
+      - name: Scrape Firefox (headless)
+        run: npm run scrape:firefox:headless
+      - name: Tests Firefox
+        run: npm run test:firefox
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artifacts-firefox
+          path: |
+            HIT2/results/
+            HIT2/screenshots/
+            HIT2/logs/
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 5. Comparación cross-browser + reporte de paridad
+  # ────────────────────────────────────────────────────────────────────────────
+  compare:
+    name: Cross-Browser Comparison
+    runs-on: ubuntu-latest
+    needs: [test-chrome, test-firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: HIT2/package-lock.json
+      - run: npm ci
+      - uses: browser-actions/setup-chrome@v1
+      - uses: browser-actions/setup-firefox@v1
+      - uses: browser-actions/setup-geckodriver@latest
+      - name: Run comparison (ambos browsers)
+        run: npm run compare:headless
+      - name: Parity tests
+        run: npm run test:parity
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comparison-report
+          path: |
+            HIT2/results/comparison-*.json
+            HIT2/results/comparison-*.html
+            HIT2/screenshots/
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 6. Publicar reporte en GitHub Pages (solo en main)
+  # ────────────────────────────────────────────────────────────────────────────
+  publish-report:
+    name: Publish GitHub Pages
+    runs-on: ubuntu-latest
+    needs: compare
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download comparison report
+        uses: actions/download-artifact@v4
+        with:
+          name: comparison-report
+          path: pages/hit2
+      - name: Create index
+        run: |
+          mkdir -p pages
+          cat > pages/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="es">
+          <head><meta charset="UTF-8"><title>HIT #2 — Reporte</title></head>
+          <body>
+            <h1>HIT #2 — Browser Factory Cross-Browser</h1>
+            <ul>
+              <li><a href="hit2/">Reporte de comparación</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pages
+          publish_branch: gh-pages
+          keep_files: true

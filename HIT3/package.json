@@ -1,0 +1,28 @@
+{
+  "name": "hit3-mercadolibre-filters",
+  "version": "1.0.0",
+  "description": "HIT #3 — Aplicación de filtros DOM (Condición, Tienda oficial, Orden) + screenshot por browser",
+  "main": "src/scrapers/mercadolibre.js",
+  "scripts": {
+    "scrape": "node src/scrapers/mercadolibre.js",
+    "scrape:chrome": "BROWSER=chrome node src/scrapers/mercadolibre.js",
+    "scrape:firefox": "BROWSER=firefox node src/scrapers/mercadolibre.js",
+    "scrape:chrome:headless": "BROWSER=chrome HEADLESS=true node src/scrapers/mercadolibre.js",
+    "scrape:firefox:headless": "BROWSER=firefox HEADLESS=true node src/scrapers/mercadolibre.js",
+    "scrape:both:headless": "npm run scrape:chrome:headless && npm run scrape:firefox:headless",
+    "test": "jest --forceExit",
+    "test:unit": "jest tests/browserOptions.test.js --forceExit",
+    "test:chrome": "BROWSER=chrome jest tests/scraper.test.js tests/filters.test.js --forceExit",
+    "test:firefox": "BROWSER=firefox jest tests/scraper.test.js tests/filters.test.js --forceExit"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.27.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

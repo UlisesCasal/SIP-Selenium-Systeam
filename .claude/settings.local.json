@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(BROWSER=chrome QUERY=\"bicicleta rodado 29\" node src/scrapers/mercadolibre.js)",
+      "Bash(QUERY=\"bicicleta rodado 29\" node src/scrapers/diagnose-filters.js)",
+      "Bash(BROWSER=chrome QUERY=\"iPhone 16 Pro Max\" node src/scrapers/mercadolibre.js)",
+      "Bash(BROWSER=chrome QUERY=\"GeForce RTX 5090\" node src/scrapers/mercadolibre.js)"
+    ]
+  }
+}
