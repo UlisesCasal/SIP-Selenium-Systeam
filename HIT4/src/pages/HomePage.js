@@ -38,6 +38,12 @@ class HomePage {
   }
 
   async _waitForSearchInput(timeout = this.explicitWait) {
+    const isBlocked = await this.driver.findElements(
+      By.xpath('//*[contains(text(),"ingresa a tu cuenta")]'),
+    );
+    if (isBlocked.length > 0) {
+      throw new Error("BOT DETECTADO: Mercado Libre pide login.");
+    }
     for (const locator of SEARCH_INPUT_LOCATORS) {
       try {
         const element = await this.driver.wait(
