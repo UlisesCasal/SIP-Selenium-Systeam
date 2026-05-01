@@ -19,7 +19,7 @@ class MercadoLibreScraper {
   }
 
   async run() {
-    const driver = await this.browserFactory.create(this.config.toBrowserOptions());
+    const driver = await this.browserFactory.create(this.config.browser, this.config.headless);
     const summary = [];
 
     try {
