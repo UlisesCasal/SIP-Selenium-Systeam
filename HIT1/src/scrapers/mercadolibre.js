@@ -10,7 +10,7 @@ const logger = require('../utils/logger');
 const throttle = require('../utils/throttle');
 
 // Productos objetivo del Hit #1
-const SEARCH_QUERIES = ['bicicleta rodado 29'];
+const SEARCH_QUERIES = ['Bicicleta rodado 29', 'iPhone 16 Pro Max', 'GeForce RTX 5090'];
 
 /**
  * Ejecuta el scraper para un browser dado.

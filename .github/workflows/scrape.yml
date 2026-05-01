@@ -1,0 +1,64 @@
+name: Scraper CI
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, firefox]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect secrets with gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build -t ml-scraper:ci .
+
+      - name: Run scraper (headless ${{ matrix.browser }})
+        run: |
+          docker run --rm \
+            -e BROWSER=${{ matrix.browser }} \
+            -e HEADLESS=true \
+            -v ${{ github.workspace }}/output:/app/output \
+            ml-scraper:ci
+
+      - name: Run tests with coverage gate
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/coverage:/app/coverage \
+            ml-scraper:ci \
+            npm test -- --coverage
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-output-${{ matrix.browser }}
+          path: |
+            output/
+            coverage/
+            screenshots/
+
+  validate-k8s:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Validate Kubernetes manifests (dry-run)
+        run: |
+          # Si no tenés la carpeta k8s todavía, podés comentar este paso
+          if [ -d "k8s" ]; then
+            for f in k8s/*.yaml; do
+              kubectl apply --dry-run=client -f "$f"
+            done
+          else
+            echo "Carpeta k8s no encontrada, omitiendo validación."
+          fi
