@@ -36,7 +36,8 @@ jobs:
         run: |
           docker run --rm \
             --entrypoint npm \
-            -v ${{ github.workspace }}/coverage:/app/coverage \
+            --workdir /app/HIT1 \
+            -v ${{ github.workspace }}/coverage:/app/HIT1/coverage \
             ml-scraper:ci \
             test -- --coverage
 
