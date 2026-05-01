@@ -39,12 +39,11 @@ class HomePage {
     logger.info(`Searching for: "${query}"`);
     const input = await this._waitForSearchInput();
     await input.clear();
-    await input.sendKeys(query);
+    // Enviamos el Enter key directamente en el input para evitar clicks interceptados
+    const { Key } = require('selenium-webdriver');
+    await input.sendKeys(query, Key.ENTER);
 
-    const button = await this._findFirstLocated(this.searchButtonLocators);
-    await button.click();
-
-    logger.info('Search submitted');
+    logger.info('Search submitted via ENTER key');
   }
 
   async _waitForSearchInput() {
