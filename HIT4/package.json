@@ -1,0 +1,26 @@
+{
+  "name": "hit4-mercadolibre-multiproduct",
+  "version": "1.0.0",
+  "description": "HIT #4 — Scraper multi-producto de MercadoLibre con filtros, JSON, tests, Docker y CI",
+  "main": "src/scrapers/mercadolibre.js",
+  "scripts": {
+    "scrape": "node src/scrapers/mercadolibre.js",
+    "scrape:headless": "HEADLESS=true node src/scrapers/mercadolibre.js",
+    "scrape:chrome": "BROWSER=chrome node src/scrapers/mercadolibre.js",
+    "scrape:firefox": "BROWSER=firefox node src/scrapers/mercadolibre.js",
+    "test": "jest --forceExit",
+    "test:unit": "jest tests/unit --forceExit",
+    "test:integration": "jest tests/integration --forceExit",
+    "validate": "node src/utils/validate-output.js"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.27.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
