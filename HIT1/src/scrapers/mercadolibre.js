@@ -144,7 +144,7 @@ function generateHtmlReport(results, browserName) {
 // Entry point cuando se ejecuta directamente
 // ──────────────────────────────────────────────────────────
 async function main() {
-  const browserArg = process.argv[2] || 'chrome';
+  const browserArg = process.env.BROWSER || process.argv[2] || 'chrome';
   const headless = process.argv.includes('--headless') || process.env.HEADLESS === 'true';
 
   logger.info('='.repeat(60));

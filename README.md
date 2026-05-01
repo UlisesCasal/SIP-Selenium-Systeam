@@ -110,3 +110,6 @@ docker.io/library/mi-imagen:latest                                              
 image.index.v1+json                             sha256:0a4d133f1e7f118d9c556841cb2bee7ec932a431b0ce0795b0da832dd9fb8abd 24.6 MiB linux/arm64
                                                                                 io.cri-containerd.image=managed
 ```
+# Cómo correr Parte 1 + Parte 2 (Docker, k3s/k3d)
+
+# Comandos exactos para reproducir el demo del Hit #7
