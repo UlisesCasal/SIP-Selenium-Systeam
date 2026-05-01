@@ -57,6 +57,25 @@ class HomePage {
         // intentar siguiente selector
       }
     }
+
+    logger.error('Timeout esperando el input de búsqueda. Tomando screenshot para debug visual...');
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const screenshot = await this.driver.takeScreenshot();
+      
+      const outputDir = path.resolve(process.cwd(), 'output');
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      const filePath = path.join(outputDir, 'error-home-captura.png');
+      fs.writeFileSync(filePath, screenshot, 'base64');
+      logger.info(`Screenshot guardado en: ${filePath}`);
+    } catch (err) {
+      logger.error('No se pudo tomar el screenshot de debug: ' + err.message);
+    }
+
     throw new Error('No se encontró el input de búsqueda en la home');
   }
 

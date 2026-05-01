@@ -22,6 +22,12 @@ class BrowserFactory {
     switch (browserName.toLowerCase()) {
       case 'chrome': {
         const options = new chrome.Options();
+        
+        // Stealth flags solicitados
+        options.excludeSwitches('enable-automation');
+        options.addArguments('--disable-blink-features=AutomationControlled');
+        options.addArguments('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
         if (headless) {
           // --headless=new: Chrome 112+ nueva implementación headless
           options.addArguments('--headless=new');
