@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   scraper:
@@ -11,18 +11,6 @@ services:
     environment:
       - BROWSER=${BROWSER:-chrome}
       - HEADLESS=${HEADLESS:-true}
-    # Mount de volumen para persistir JSON y screenshots generados en /app/output
+    # Mount de volumen para persistir JSON y screenshots generados
     volumes:
       - ./output:/app/output
-
-  lint:
-    image: ml-scraper:1.0.0
-    container_name: mercadolibre-linter
-    # Sobrescribimos el ENTRYPOINT original de la imagen ("node src/index.js")
-    # para ejecutar el linter en lugar del scraper.
-    entrypoint: ["npx", "eslint", "src/"]
-    volumes:
-      - .:/app  # Para que el linter analice los archivos en tiempo real
-    # Aseguramos que la imagen base se construya desde el servicio principal
-    depends_on:
-      - scraper
