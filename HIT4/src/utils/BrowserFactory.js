@@ -34,11 +34,25 @@ class BrowserFactory {
           .forBrowser('chrome')
           .setChromeOptions(options)
           .build();
+
+        // Stealth Chrome: Ocultar navigator.webdriver
+        await driver.sendAndGetDevToolsCommand('Page.addScriptToEvaluateOnNewDocument', {
+          source: `
+            Object.defineProperty(navigator, 'webdriver', {
+              get: () => undefined
+            });
+          `
+        });
         break;
       }
 
       case 'firefox': {
         const options = new firefox.Options();
+        
+        // Stealth Firefox: Ocultar navigator.webdriver y extensiones de automatización
+        options.setPreference('dom.webdriver.enabled', false);
+        options.setPreference('useAutomationExtension', false);
+        
         if (headless) {
           options.addArguments('--headless');
         }

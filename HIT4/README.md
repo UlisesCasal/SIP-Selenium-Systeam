@@ -32,7 +32,20 @@ Chrome o Firefox deben estar instalados localmente. En Docker se instala Chromiu
 ## Ejecución
 
 ```bash
-npm run scrape:headless
+# Chrome (ventana visible)
+npm run scrape:chrome
+
+# Firefox (ventana visible)
+npm run scrape:firefox
+
+# Chrome en modo headless (CI/CD)
+npm run scrape:chrome:headless
+
+# Firefox en modo headless
+npm run scrape:firefox:headless
+
+# Ambos navegadores seguidos
+npm run scrape:both:headless
 ```
 
 Archivos esperados:
