@@ -1,8 +1,7 @@
 # ============ Stage 1: builder (deps + compile) ============
 FROM node:24-trixie-slim AS builder
 WORKDIR /app
-# System deps para compilar wheels si hace falta
-COPY package*.json ./
+COPY HIT1/package*.json ./
 RUN npm ci --omit=dev
 
 # ============ Stage 2: runtime (browsers + app) ============
@@ -36,4 +35,4 @@ USER node
 HEALTHCHECK --interval=30s --timeout=5s \
   CMD node -e "require('selenium-webdriver'); console.log('ok')" || exit 1
 
-ENTRYPOINT ["node", "src/scrapers/mercadolibre.js"]
+ENTRYPOINT ["node", "HIT1/src/scrapers/mercadolibre.js"]
