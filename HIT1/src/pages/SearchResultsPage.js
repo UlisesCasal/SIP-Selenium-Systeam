@@ -12,6 +12,8 @@ const ITEM_LOCATORS = [
   By.css('li.ui-search-layout__item'),
   By.css('.ui-search-results .ui-search-layout__item'),
   By.css('.poly-card'),
+  By.css('.ui-search-result__wrapper'),
+  By.css('.andes-card'),
 ];
 
 const TITLE_SELECTORS = [
@@ -52,6 +54,19 @@ class SearchResultsPage {
     }
 
     if (!found) {
+      logger.error('Timeout esperando resultados. Tomando screenshot para debug visual...');
+      try {
+        const screenshot = await this.driver.takeScreenshot();
+        const outputDir = path.resolve(process.cwd(), 'output');
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+        const filePath = path.join(outputDir, 'error-resultados-captura.png');
+        fs.writeFileSync(filePath, screenshot, 'base64');
+        logger.info(`Screenshot guardado en: ${filePath}`);
+      } catch (err) {
+        logger.error('No se pudo tomar el screenshot de debug: ' + err.message);
+      }
       throw new Error('No se encontró ningún resultado en la página');
     }
 

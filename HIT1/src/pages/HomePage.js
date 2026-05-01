@@ -39,12 +39,11 @@ class HomePage {
     logger.info(`Searching for: "${query}"`);
     const input = await this._waitForSearchInput();
     await input.clear();
-    await input.sendKeys(query);
+    // Enviamos el Enter key directamente en el input para evitar clicks interceptados
+    const { Key } = require('selenium-webdriver');
+    await input.sendKeys(query, Key.ENTER);
 
-    const button = await this._findFirstLocated(this.searchButtonLocators);
-    await button.click();
-
-    logger.info('Search submitted');
+    logger.info('Search submitted via ENTER key');
   }
 
   async _waitForSearchInput() {
@@ -57,6 +56,25 @@ class HomePage {
         // intentar siguiente selector
       }
     }
+
+    logger.error('Timeout esperando el input de búsqueda. Tomando screenshot para debug visual...');
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const screenshot = await this.driver.takeScreenshot();
+      
+      const outputDir = path.resolve(process.cwd(), 'output');
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      const filePath = path.join(outputDir, 'error-home-captura.png');
+      fs.writeFileSync(filePath, screenshot, 'base64');
+      logger.info(`Screenshot guardado en: ${filePath}`);
+    } catch (err) {
+      logger.error('No se pudo tomar el screenshot de debug: ' + err.message);
+    }
+
     throw new Error('No se encontró el input de búsqueda en la home');
   }
 

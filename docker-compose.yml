@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ml-scraper:1.0.0
+    container_name: mercadolibre-scraper
+    # Variables de entorno con valores por defecto
+    environment:
+      - BROWSER=${BROWSER:-chrome}
+      - HEADLESS=${HEADLESS:-true}
+    # Mount de volumen para persistir JSON y screenshots generados
+    volumes:
+      - ./output:/app/output
