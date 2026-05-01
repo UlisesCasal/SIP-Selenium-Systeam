@@ -5,19 +5,22 @@ A continuación, se presenta la evidencia técnica correspondiente a los cinco p
 Al ejecutar el comando, se confirma que el nodo del cluster se encuentra en estado **Ready**.
 
 * **Evidencia:**
+```bash
 PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl get nodes
 NAME                      VERSION         STATUS     AGE           ROLES
 k3d-sobel-server-0     v1.31.5+k3s1       Ready      47m   control-plane, master
-
+```
 ### 2. Despliegue de nginx-test (replicas: 2)
 Se desplegó exitosamente el servicio `nginx-test` con dos réplicas funcionales, verificando el acceso mediante `curl localhost:8080`.
 
-* **Evidencia:**
+* **Evidencia:**  
+```bash
 PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl port-forward svc/nginx-test 8080:80
 Forwarding from 127.0.0.1:8080 -> 80
 Forwarding from [ :: 1]:8080 -> 80
 Handling connection for 8080
-
+```
+```bash
 PS C:\Users\Usuario> curl http://localhost:8080
 
 Advertencia de seguridad: riesgo de ejecución de script
@@ -46,11 +49,12 @@ RawContent: HTTP/1.1 200 OK
             Accept-Ranges: bytes
             Content-Length: 896
             Content-Type: text/html
-
+```
 ### 3. Autoreparación del Deployment
 Se verificó la capacidad de recuperación del sistema eliminando un Pod manualmente y observando cómo el Deployment lo recrea de forma automática para mantener el estado deseado.
 
 * **Evidencia:**
+```bash
 PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl get pods -l app=nginx-test
 NAME                              READY          STATUS            RESTARTS          AGE
 nginx-test-786f4f95d-qjgn5         1/1           Running              0             8m27s
@@ -61,10 +65,12 @@ PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl get pods -l app=nginx-
 NAME                              READY          STATUS            RESTARTS          AGE
 nginx-test-786f4f95d-c4qwf         1/1           Running              0              21s
 nginx-test-786f4f95d-zhp95         1/1           Running              0             5m51s
+```
 ### 4. Importación de imágenes Docker
 Se domina el flujo de trabajo para importar imágenes locales al entorno de ejecución del cluster (`k3d image import` / `k3s ctr images import`).
 
 * **Evidencia:**
+```bash
 collazo@MacBook-Air-de-naiara mi-proyecto-k3d % docker build -t mi-imagen:latest .
 [[+] Building 23.1s (5/5) FINISHED                                                                                            docker:desktop-linux                                                                                           
 [ => [internal] load build definition from Dockerfile                                                                                0.0s
@@ -103,4 +109,4 @@ collazo@MacBook-Air-de-naiara mi-proyecto-k3d % docker exec k3d-sobel-server-0 c
 docker.io/library/mi-imagen:latest                                                                                         application/vnd.oci.
 image.index.v1+json                             sha256:0a4d133f1e7f118d9c556841cb2bee7ec932a431b0ce0795b0da832dd9fb8abd 24.6 MiB linux/arm64
                                                                                 io.cri-containerd.image=managed
-
+```
