@@ -35,9 +35,10 @@ jobs:
       - name: Run tests with coverage gate
         run: |
           docker run --rm \
+            --entrypoint npm \
             -v ${{ github.workspace }}/coverage:/app/coverage \
             ml-scraper:ci \
-            npm test -- --coverage
+            test -- --coverage
 
       - name: Upload artifacts
         if: always()
