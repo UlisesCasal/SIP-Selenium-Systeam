@@ -26,22 +26,29 @@ class SearchResultsPage {
       WAIT_MS
     ).catch(() => {});
 
-    // 2. Esperar a que aparezcan ítems de producto (JS directo — no depende de visibilidad)
+    // 2. Esperar a que aparezcan ítems de producto con título válido
+    //    (JS directo — no depende de visibilidad)
     const found = await this.driver.wait(async () => {
       return this.driver.executeScript(() => {
-        // Del más específico al más genérico — incluyendo selectores estructurales
-        const selectors = [
+        const itemSelectors = [
           'li.ui-search-layout__item',
           '.poly-card',
           '.ui-search-result__wrapper',
-          'ol[class*="search"] li',
-          'ul[class*="layout"] li',
-          '[class*="search-results"] li',
-          '[class*="search-layout"] li',
-          '[class*="ui-search"] li',
+          '[class*="ui-search-result"]',
         ];
-        for (const sel of selectors) {
-          if (document.querySelectorAll(sel).length >= 3) return true;
+        const titleSelectors = [
+          '.poly-component__title',
+          '.ui-search-item__title',
+          'h2',
+          'a[title]',
+        ];
+        for (const sel of itemSelectors) {
+          const items = Array.from(document.querySelectorAll(sel));
+          // Aceptamos si al menos 1 ítem tiene título — algunos searches devuelven pocos resultados
+          const withTitle = items.filter(it =>
+            titleSelectors.some(t => it.querySelector(t))
+          );
+          if (withTitle.length >= 1) return true;
         }
         return false;
       });
@@ -95,26 +102,25 @@ class SearchResultsPage {
         'li.ui-search-layout__item',
         '.poly-card',
         '.ui-search-result__wrapper',
-        'ol[class*="search"] li',
-        'ul[class*="layout"] li',
-        '[class*="search-results"] li',
-        '[class*="search-layout"] li',
-        '[class*="ui-search"] li',
+        '[class*="ui-search-result"]',
       ];
-
-      let items = [];
-      for (const sel of itemSelectors) {
-        const found = Array.from(document.querySelectorAll(sel));
-        if (found.length >= 3) { items = found; break; }
-      }
 
       const titleSelectors = [
         '.poly-component__title',
         '.ui-search-item__title',
         'h2',
-        '[class*="title"]',
         'a[title]',
       ];
+
+      // Para cada selector de contenedor, quedarnos con el primero que devuelva
+      // ítems CON título válido (filtra recommendations / suggested searches).
+      let items = [];
+      for (const sel of itemSelectors) {
+        const found = Array.from(document.querySelectorAll(sel));
+        const valid = found.filter(it => titleSelectors.some(t => it.querySelector(t)));
+        if (valid.length > 0) { items = valid; break; }
+      }
+
       const priceSelectors = [
         '.poly-price__current .andes-money-amount__fraction',
         '.andes-money-amount__fraction',

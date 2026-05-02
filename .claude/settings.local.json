@@ -9,7 +9,12 @@
       "Bash(BROWSER=chrome QUERY=\"GeForce RTX 5090\" node src/scrapers/mercadolibre.js)",
       "Bash(gh pr *)",
       "Bash(git checkout *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(HEADLESS=true BROWSER=chrome timeout 90 node src/scrapers/mercadolibre.js chrome)",
+      "Bash(HEADLESS=true BROWSER=chrome node src/scrapers/mercadolibre.js chrome)",
+      "Bash(node *)",
+      "Bash(BROWSER=chrome npm test)",
+      "Bash(BROWSER=firefox npm test)"
     ]
   }
 }

@@ -2,7 +2,17 @@ const { By, until } = require('selenium-webdriver');
 const logger = require('../utils/logger');
 
 const BASE_URL = 'https://www.mercadolibre.com.ar';
+const LISTADO_BASE = 'https://listado.mercadolibre.com.ar';
 const WAIT_MS = 15000;
+
+function slugify(query) {
+  return query
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // quitar acentos
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
 
 /**
  * Page Object — Página principal de MercadoLibre Argentina.
@@ -36,14 +46,11 @@ class HomePage {
   }
 
   async search(query) {
-    logger.info(`Searching for: "${query}"`);
-    const input = await this._waitForSearchInput();
-    await input.clear();
-    // Enviamos el Enter key directamente en el input para evitar clicks interceptados
-    const { Key } = require('selenium-webdriver');
-    await input.sendKeys(query, Key.ENTER);
-
-    logger.info('Search submitted via ENTER key');
+    // Navegación directa al subdominio listado.mercadolibre.com.ar para evitar
+    // que el submit del search box dispare account-verification en CI/cloud IPs.
+    const url = `${LISTADO_BASE}/${slugify(query)}`;
+    logger.info(`Navigating directly to: ${url}`);
+    await this.driver.get(url);
   }
 
   async _waitForSearchInput() {

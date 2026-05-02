@@ -23,6 +23,10 @@ class BrowserFactory {
       case 'chrome': {
         const options = new chrome.Options();
 
+        // Page load 'eager' = retorna apenas DOMContentLoaded, sin esperar
+        // imágenes/ads/analytics. Crítico para sitios pesados como ML.
+        options.setPageLoadStrategy('eager');
+
         options.excludeSwitches('enable-automation');
         options.addArguments('--disable-blink-features=AutomationControlled');
         options.addArguments(
@@ -63,6 +67,7 @@ class BrowserFactory {
 
       case 'firefox': {
         const options = new firefox.Options();
+        options.setPageLoadStrategy('eager');
         if (headless) {
           options.addArguments('--headless');
         }
