@@ -1,6 +1,19 @@
 {
+  "name": "hit6-mercadolibre-scraper",
+  "version": "1.0.0",
+  "description": "HIT #6",
+  "main": "src/scrapers/mercadolibre.js",
   "scripts": {
-    "prepare": "husky || true"
+    "prepare": "husky",
+    "scrape": "node src/scrapers/mercadolibre.js",
+    "scrape:headless": "node -e \"process.env.HEADLESS='true'; require('./src/scrapers/mercadolibre.js')\"",
+    "scrape:chrome": "node -e \"process.env.BROWSER='chrome'; require('./src/scrapers/mercadolibre.js')\"",
+    "scrape:firefox": "node -e \"process.env.BROWSER='firefox'; require('./src/scrapers/mercadolibre.js')\"",
+    "scrape:both:headless": "node -e \"process.env.HEADLESS='true'; process.env.BROWSER='chrome'; require('./src/scrapers/mercadolibre.js')\" && node -e \"process.env.HEADLESS='true'; process.env.BROWSER='firefox'; require('./src/scrapers/mercadolibre.js')\"",
+    "test": "jest --forceExit",
+    "test:unit": "jest tests/unit --forceExit",
+    "test:integration": "jest tests/integration --forceExit",
+    "validate": "node src/utils/validate-output.js"
   },
   "lint-staged": {
     "*.{js,ts}": [
@@ -11,7 +24,12 @@
       "prettier --write"
     ]
   },
+  "dependencies": {
+    "selenium-webdriver": "^4.27.0",
+    "winston": "^3.17.0"
+  },
   "devDependencies": {
+    "jest": "^29.7.0",
     "husky": "^9.1.0",
     "lint-staged": "^15.2.0",
     "eslint": "^9.0.0",
