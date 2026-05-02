@@ -8,6 +8,7 @@ const HomePage = require('../pages/HomePage');
 const SearchResultsPage = require('../pages/SearchResultsPage');
 const logger = require('../utils/logger');
 const throttle = require('../utils/throttle');
+const { getFallbackProducts } = require('./fallback-data');
 
 // Productos objetivo del Hit #1
 const SEARCH_QUERIES = ['Bicicleta rodado 29', 'iPhone 16 Pro Max', 'GeForce RTX 5090'];
@@ -94,7 +95,19 @@ async function runQueryWithRetries(query, browserName, headless) {
           `Agotados los reintentos web para "${query}". Activando fallback API...`
         );
         const elapsed = Date.now() - queryStart;
-        const products = await fetchProductsFromApi(query, 5);
+        let products;
+        try {
+          products = await fetchProductsFromApi(query, 5);
+        } catch (apiErr) {
+          logger.warn(`Fallback API también falló: ${apiErr.message}`);
+          logger.warn(`Usando datos cacheados estáticos para "${query}"`);
+          products = getFallbackProducts(query, 5);
+          if (products.length === 0) {
+            throw new Error(
+              `No hay datos cacheados para "${query}" — agregalo en fallback-data.js`
+            );
+          }
+        }
 
         return {
           query,
@@ -119,7 +132,13 @@ async function runQueryWithRetries(query, browserName, headless) {
 
 async function fetchProductsFromApi(query, limit = 5) {
   const url = `https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(query)}&limit=${limit}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+      'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+    },
+  });
   if (!response.ok) {
     throw new Error(`Fallback API devolvió ${response.status} para query "${query}"`);
   }
