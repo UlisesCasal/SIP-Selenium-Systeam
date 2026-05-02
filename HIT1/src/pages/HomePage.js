@@ -63,7 +63,7 @@ class HomePage {
       const path = require('path');
       const screenshot = await this.driver.takeScreenshot();
       
-      const outputDir = path.resolve(process.cwd(), 'output');
+      const outputDir = path.resolve(__dirname, '../../output');
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }

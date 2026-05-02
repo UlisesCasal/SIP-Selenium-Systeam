@@ -1,21 +1,13 @@
-const { By, until } = require('selenium-webdriver');
+const { until } = require('selenium-webdriver');
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
 
-const WAIT_MS = 20000;
+const WAIT_MS = 30000;
 
-// Selectores de contenedor de resultados — del más específico al más genérico.
-// El primero que encuentre ítems con título válido gana.
-const ITEM_CSS_SELECTORS = [
-  'li.ui-search-layout__item',
-  '.ui-search-results .ui-search-layout__item',
-  '.poly-card',
-  '.ui-search-result__wrapper',
-];
-
-// Selectores del input de búsqueda (para waitForResults vía URL)
-const RESULTS_URL_PATTERN = /listado\.mercadolibre|search|s\?/i;
+// Directorio raíz de HIT1 — relativo a este archivo para evitar
+// problemas de permisos cuando process.cwd() no es writable.
+const HIT1_ROOT = path.resolve(__dirname, '../..');
 
 /**
  * Page Object — Página de resultados de búsqueda de MercadoLibre.
@@ -28,37 +20,38 @@ class SearchResultsPage {
   async waitForResults() {
     logger.info('Waiting for search results...');
 
-    // Esperar a que la URL cambie a una página de resultados
-    try {
-      await this.driver.wait(async () => {
-        const url = await this.driver.getCurrentUrl();
-        return RESULTS_URL_PATTERN.test(url);
-      }, WAIT_MS);
-    } catch {
-      // Continuar aunque la URL no matchee — puede ser una URL de resultado no estándar
-    }
+    // 1. Esperar a que el documento termine de cargar
+    await this.driver.wait(
+      () => this.driver.executeScript(() => document.readyState === 'complete'),
+      WAIT_MS
+    ).catch(() => {});
 
-    // Esperar a que aparezcan ítems de producto vía JS (no depende de visibilidad)
+    // 2. Esperar a que aparezcan ítems de producto (JS directo — no depende de visibilidad)
     const found = await this.driver.wait(async () => {
-      const count = await this.driver.executeScript(() => {
+      return this.driver.executeScript(() => {
+        // Del más específico al más genérico — incluyendo selectores estructurales
         const selectors = [
           'li.ui-search-layout__item',
           '.poly-card',
           '.ui-search-result__wrapper',
+          'ol[class*="search"] li',
+          'ul[class*="layout"] li',
+          '[class*="search-results"] li',
+          '[class*="search-layout"] li',
+          '[class*="ui-search"] li',
         ];
         for (const sel of selectors) {
-          if (document.querySelectorAll(sel).length > 0) return true;
+          if (document.querySelectorAll(sel).length >= 3) return true;
         }
         return false;
       });
-      return count;
     }, WAIT_MS).catch(() => false);
 
     if (!found) {
       logger.error('Timeout esperando resultados. Tomando screenshot para debug visual...');
       try {
         const screenshot = await this.driver.takeScreenshot();
-        const outputDir = path.resolve(process.cwd(), 'output');
+        const outputDir = path.join(HIT1_ROOT, 'output');
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
         const filePath = path.join(outputDir, 'error-resultados-captura.png');
         fs.writeFileSync(filePath, screenshot, 'base64');
@@ -80,11 +73,22 @@ class SearchResultsPage {
    * @returns {Promise<Array<{position: number, title: string, price: string|null, url: string|null}>>}
    */
   async getProducts(limit = 5) {
-    const products = await this.driver.executeScript((selectors, maxItems) => {
+    const products = await this.driver.executeScript((maxItems) => {
+      const itemSelectors = [
+        'li.ui-search-layout__item',
+        '.poly-card',
+        '.ui-search-result__wrapper',
+        'ol[class*="search"] li',
+        'ul[class*="layout"] li',
+        '[class*="search-results"] li',
+        '[class*="search-layout"] li',
+        '[class*="ui-search"] li',
+      ];
+
       let items = [];
-      for (const sel of selectors) {
-        items = Array.from(document.querySelectorAll(sel));
-        if (items.length > 0) break;
+      for (const sel of itemSelectors) {
+        const found = Array.from(document.querySelectorAll(sel));
+        if (found.length >= 3) { items = found; break; }
       }
 
       const titleSelectors = [
@@ -92,19 +96,21 @@ class SearchResultsPage {
         '.ui-search-item__title',
         'h2',
         '[class*="title"]',
+        'a[title]',
       ];
       const priceSelectors = [
         '.poly-price__current .andes-money-amount__fraction',
         '.andes-money-amount__fraction',
         '.price-tag-fraction',
         '[class*="price"] [class*="fraction"]',
+        '[class*="amount"] [class*="fraction"]',
       ];
 
       function extractText(item, sels) {
         for (const s of sels) {
           const el = item.querySelector(s);
           if (el) {
-            const text = (el.textContent || '').trim();
+            const text = (el.getAttribute('title') || el.textContent || '').trim();
             if (text) return text;
           }
         }
@@ -126,7 +132,7 @@ class SearchResultsPage {
         });
       }
       return results;
-    }, ITEM_CSS_SELECTORS, limit);
+    }, limit);
 
     if (products.length === 0) {
       logger.warn('No product items found on page');
@@ -142,7 +148,7 @@ class SearchResultsPage {
    * @param {string} name - nombre base del archivo
    */
   async takeScreenshot(name) {
-    const screenshotsDir = path.join(__dirname, '../../screenshots');
+    const screenshotsDir = path.join(HIT1_ROOT, 'screenshots');
     if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
