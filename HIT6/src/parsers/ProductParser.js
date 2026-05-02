@@ -3,9 +3,13 @@
 class ProductParser {
   static parsePrice(raw) {
     if (raw === null || raw === undefined) return null;
-    const digits = String(raw).replace(/[^\d]/g, '');
+    const str = String(raw);
+    const isNegative = /^[\s$]*-/.test(str);
+    const digits = str.replace(/[^\d]/g, '');
     if (!digits) return null;
-    return Number.parseInt(digits, 10);
+    const price = Number.parseInt(digits, 10);
+    if (isNegative || price <= 0) return null;
+    return price;
   }
 
   static normalizeText(value) {

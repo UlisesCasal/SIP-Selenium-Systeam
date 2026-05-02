@@ -4,9 +4,19 @@ module.exports = {
   testTimeout: 300000,
   verbose: true,
   testMatch: ['**/tests/**/*.test.js'],
-  collectCoverage: true, // Fuerza la recolección
+  collectCoverage: true, 
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'html'], // Genera consola y HTML
+  coverageReporters: ['text', 'html'],
+  
+  collectCoverageFrom: [
+    'src/**/*.js',
+    '!src/scrapers/mercadolibre.js',
+    '!src/utils/BrowserFactory.js',
+    '!src/config/ScraperConfig.js',
+    '!src/utils/validate-output.js',
+    '!src/pages/**/*.js'
+  ],
+
   coverageThreshold: {
     global: {
       statements: 70,

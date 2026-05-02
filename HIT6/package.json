@@ -1,7 +1,7 @@
 {
-  "name": "hit5-mercadolibre-robust",
+  "name": "hit6-mercadolibre-robust",
   "version": "1.0.0",
-  "description": "HIT #5 — Robustez: selectores centralizados, retries con backoff y logging estructurado",
+  "description": "HIT #6 — Robustez: selectores centralizados, retries con backoff y logging estructurado",
   "main": "src/scrapers/mercadolibre.js",
   "scripts": {
     "scrape": "node src/scrapers/mercadolibre.js",
@@ -9,9 +9,9 @@
     "scrape:chrome": "node -e \"process.env.BROWSER='chrome'; require('./src/scrapers/mercadolibre.js')\"",
     "scrape:firefox": "node -e \"process.env.BROWSER='firefox'; require('./src/scrapers/mercadolibre.js')\"",
     "scrape:both:headless": "node -e \"process.env.HEADLESS='true'; process.env.BROWSER='chrome'; require('./src/scrapers/mercadolibre.js')\" && node -e \"process.env.HEADLESS='true'; process.env.BROWSER='firefox'; require('./src/scrapers/mercadolibre.js')\"",
-    "test": "jest --forceExit",
-    "test:unit": "jest tests/unit --forceExit",
-    "test:integration": "jest tests/integration --forceExit",
+    "test": "jest --forceExit --coverage",
+    "test:unit": "jest tests/unit --forceExit --coverage",
+    "test:integration": "jest tests/integration --forceExit --coverage",
     "validate": "node src/utils/validate-output.js"
   },
   "dependencies": {

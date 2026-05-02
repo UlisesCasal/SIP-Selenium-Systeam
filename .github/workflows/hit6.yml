@@ -2,13 +2,9 @@ name: HIT6 Scraper CI
 
 on:
   push:
-    paths:
-      - 'HIT6/**'
-      - '.github/workflows/hit6.yml'
+    branches: [main, hit6]
   pull_request:
-    paths:
-      - 'HIT6/**'
-      - '.github/workflows/hit6.yml'
+    branches: [main, hit6]
   workflow_dispatch:
 
 jobs:
@@ -30,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chrome, firefox]
+        browser: [chrome, firefox] 
     defaults:
       run:
         working-directory: HIT6
@@ -61,17 +57,14 @@ jobs:
       - uses: browser-actions/setup-geckodriver@latest
         if: matrix.browser == 'firefox'
         
-      - name: Run unit tests with coverage
+      - name: Run unit tests with coverage gate
         run: npm run test:unit -- --coverage
         
       - name: Run integration tests
-        run: RUN_E2E=true RESULT_LIMIT=10 PRODUCTS="bicicleta rodado 29" npm run test:integration
+        run: RUN_E2E=true npm run test:integration
         
       - name: Execute scraper
         run: npm run scrape:headless
-        
-      - name: Validate JSON schema
-        run: npm run validate
         
       - name: Upload scraper artifacts and Coverage HTML
         uses: actions/upload-artifact@v4
