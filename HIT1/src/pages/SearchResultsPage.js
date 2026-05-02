@@ -50,6 +50,23 @@ class SearchResultsPage {
     if (!found) {
       logger.error('Timeout esperando resultados. Tomando screenshot para debug visual...');
       try {
+        const currentUrl = await this.driver.getCurrentUrl();
+        const pageTitle = await this.driver.getTitle();
+        logger.error(`URL actual: ${currentUrl}`);
+        logger.error(`Título de página: ${pageTitle}`);
+
+        // Loguear cuántos elementos encontró con cada selector para diagnóstico
+        const counts = await this.driver.executeScript(() => {
+          const sels = [
+            'li.ui-search-layout__item', '.poly-card', '.ui-search-result__wrapper',
+            'ol[class*="search"] li', 'ul[class*="layout"] li',
+            '[class*="search-results"] li', '[class*="ui-search"] li',
+            'li', 'a[href*="mercadolibre"]',
+          ];
+          return sels.map(s => `${s}: ${document.querySelectorAll(s).length}`).join(' | ');
+        });
+        logger.error(`Conteo de selectores: ${counts}`);
+
         const screenshot = await this.driver.takeScreenshot();
         const outputDir = path.join(HIT1_ROOT, 'output');
         if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
