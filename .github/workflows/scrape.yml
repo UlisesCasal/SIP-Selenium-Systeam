@@ -13,6 +13,8 @@ jobs:
         browser: [chrome, firefox]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect secrets with gitleaks
         uses: gitleaks/gitleaks-action@v2
@@ -33,9 +35,10 @@ jobs:
       - name: Run tests with coverage gate
         run: |
           docker run --rm \
+            --entrypoint npm \
             -v ${{ github.workspace }}/coverage:/app/coverage \
             ml-scraper:ci \
-            npm test -- --coverage
+            test -- --coverage
 
       - name: Upload artifacts
         if: always()
