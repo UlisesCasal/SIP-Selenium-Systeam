@@ -156,8 +156,11 @@ class SearchResultsPage {
     for (const selector of selectors) {
       try {
         const el = await element.findElement(By.css(selector));
-        const text = await el.getText();
-        if (text.trim()) return text.trim();
+        let text = await el.getText();
+        if (!text.trim()) {
+          text = await el.getAttribute('textContent');
+        }
+        if (text && text.trim()) return text.trim();
       } catch {
         // probar siguiente selector
       }
