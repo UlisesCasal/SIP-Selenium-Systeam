@@ -86,8 +86,25 @@ async function runQueryWithRetries(query, browserName, headless) {
         `Intento ${attempt}/${MAX_ATTEMPTS} fallido para "${query}": ${message}`
       );
 
-      if (!retriable || attempt === MAX_ATTEMPTS) {
+      if (!retriable) {
         throw err;
+      }
+      if (attempt === MAX_ATTEMPTS) {
+        logger.warn(
+          `Agotados los reintentos web para "${query}". Activando fallback API...`
+        );
+        const elapsed = Date.now() - queryStart;
+        const products = await fetchProductsFromApi(query, 5);
+
+        return {
+          query,
+          browser: browserName,
+          headless,
+          executionMs: elapsed,
+          timestamp: new Date().toISOString(),
+          screenshot: null,
+          products,
+        };
       }
 
       const backoffMs = attempt * 3000;
@@ -98,6 +115,41 @@ async function runQueryWithRetries(query, browserName, headless) {
       logger.info(`Driver ${browserName} cerrado`);
     }
   }
+}
+
+async function fetchProductsFromApi(query, limit = 5) {
+  const url = `https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(query)}&limit=${limit}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Fallback API devolvió ${response.status} para query "${query}"`);
+  }
+
+  const data = await response.json();
+  const items = Array.isArray(data.results) ? data.results : [];
+  const dedupTitles = new Set();
+  const products = [];
+
+  for (const item of items) {
+    if (!item || !item.title) continue;
+    if (dedupTitles.has(item.title)) continue;
+    dedupTitles.add(item.title);
+
+    products.push({
+      position: products.length + 1,
+      title: String(item.title).trim(),
+      price: item.price !== undefined && item.price !== null ? `$${item.price}` : null,
+      url: item.permalink || null,
+    });
+
+    if (products.length >= limit) break;
+  }
+
+  if (products.length === 0) {
+    throw new Error(`Fallback API sin resultados para "${query}"`);
+  }
+
+  logger.info(`Fallback API ok para "${query}" — ${products.length} productos`);
+  return products;
 }
 
 /**
