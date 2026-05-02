@@ -5,29 +5,17 @@ const logger = require('../utils/logger');
 
 const WAIT_MS = 20000;
 
-// Selectores de MercadoLibre — en orden de preferencia según versión del sitio.
-// "poly-*" corresponde al sistema Polaris (versión más reciente).
-// "ui-search-*" corresponde a la versión anterior todavía presente en algunos casos.
-const ITEM_LOCATORS = [
-  By.css('li.ui-search-layout__item'),
-  By.css('.ui-search-results .ui-search-layout__item'),
-  By.css('.poly-card'),
-  By.css('.ui-search-result__wrapper'),
-  By.css('.andes-card'),
+// Selectores de contenedor de resultados — del más específico al más genérico.
+// El primero que encuentre ítems con título válido gana.
+const ITEM_CSS_SELECTORS = [
+  'li.ui-search-layout__item',
+  '.ui-search-results .ui-search-layout__item',
+  '.poly-card',
+  '.ui-search-result__wrapper',
 ];
 
-const TITLE_SELECTORS = [
-  '.poly-component__title',
-  '.ui-search-item__title',
-  'h2.poly-box',
-  '.ui-search-item__group__element h2',
-];
-
-const PRICE_SELECTORS = [
-  '.poly-price__current .andes-money-amount__fraction',
-  '.andes-money-amount__fraction',
-  '.price-tag-fraction',
-];
+// Selectores del input de búsqueda (para waitForResults vía URL)
+const RESULTS_URL_PATTERN = /listado\.mercadolibre|search|s\?/i;
 
 /**
  * Page Object — Página de resultados de búsqueda de MercadoLibre.
@@ -40,27 +28,38 @@ class SearchResultsPage {
   async waitForResults() {
     logger.info('Waiting for search results...');
 
-    // Explicit wait: espera a que aparezca al menos un item de resultado
-    let found = false;
-    for (const locator of ITEM_LOCATORS) {
-      try {
-        await this.driver.wait(until.elementLocated(locator), WAIT_MS);
-        found = true;
-        logger.info(`Results container found with: ${locator.toString()}`);
-        break;
-      } catch {
-        // probar siguiente
-      }
+    // Esperar a que la URL cambie a una página de resultados
+    try {
+      await this.driver.wait(async () => {
+        const url = await this.driver.getCurrentUrl();
+        return RESULTS_URL_PATTERN.test(url);
+      }, WAIT_MS);
+    } catch {
+      // Continuar aunque la URL no matchee — puede ser una URL de resultado no estándar
     }
+
+    // Esperar a que aparezcan ítems de producto vía JS (no depende de visibilidad)
+    const found = await this.driver.wait(async () => {
+      const count = await this.driver.executeScript(() => {
+        const selectors = [
+          'li.ui-search-layout__item',
+          '.poly-card',
+          '.ui-search-result__wrapper',
+        ];
+        for (const sel of selectors) {
+          if (document.querySelectorAll(sel).length > 0) return true;
+        }
+        return false;
+      });
+      return count;
+    }, WAIT_MS).catch(() => false);
 
     if (!found) {
       logger.error('Timeout esperando resultados. Tomando screenshot para debug visual...');
       try {
         const screenshot = await this.driver.takeScreenshot();
         const outputDir = path.resolve(process.cwd(), 'output');
-        if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-        }
+        if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
         const filePath = path.join(outputDir, 'error-resultados-captura.png');
         fs.writeFileSync(filePath, screenshot, 'base64');
         logger.info(`Screenshot guardado en: ${filePath}`);
@@ -70,63 +69,69 @@ class SearchResultsPage {
       throw new Error('No se encontró ningún resultado en la página');
     }
 
-    // Explicit wait adicional: espera a que los items sean visibles
-    for (const locator of ITEM_LOCATORS) {
-      try {
-        const el = await this.driver.findElement(locator);
-        await this.driver.wait(until.elementIsVisible(el), 5000);
-        break;
-      } catch {
-        // continuar
-      }
-    }
-
     logger.info('Search results are visible');
   }
 
   /**
-   * Extrae los primeros `limit` productos de la página de resultados.
+   * Extrae los primeros `limit` productos usando executeScript para máxima
+   * compatibilidad en headless (getText() puede devolver vacío si el elemento
+   * no está en el viewport; textContent siempre funciona).
    * @param {number} limit
    * @returns {Promise<Array<{position: number, title: string, price: string|null, url: string|null}>>}
    */
   async getProducts(limit = 5) {
-    let items = [];
-
-    for (const locator of ITEM_LOCATORS) {
-      items = await this.driver.findElements(locator);
-      if (items.length > 0) {
-        logger.info(`Found ${items.length} items with: ${locator.toString()}`);
-        break;
+    const products = await this.driver.executeScript((selectors, maxItems) => {
+      let items = [];
+      for (const sel of selectors) {
+        items = Array.from(document.querySelectorAll(sel));
+        if (items.length > 0) break;
       }
-    }
 
-    if (items.length === 0) {
-      logger.warn('No product items found on page');
-      return [];
-    }
+      const titleSelectors = [
+        '.poly-component__title',
+        '.ui-search-item__title',
+        'h2',
+        '[class*="title"]',
+      ];
+      const priceSelectors = [
+        '.poly-price__current .andes-money-amount__fraction',
+        '.andes-money-amount__fraction',
+        '.price-tag-fraction',
+        '[class*="price"] [class*="fraction"]',
+      ];
 
-    const products = [];
-    const count = Math.min(limit, items.length);
+      function extractText(item, sels) {
+        for (const s of sels) {
+          const el = item.querySelector(s);
+          if (el) {
+            const text = (el.textContent || '').trim();
+            if (text) return text;
+          }
+        }
+        return null;
+      }
 
-    for (let i = 0; i < count; i++) {
-      const item = items[i];
-      try {
-        const title = await this._extractText(item, TITLE_SELECTORS);
-        const price = await this._extractText(item, PRICE_SELECTORS, true);
-        const url = await this._extractLink(item);
-
-        const product = {
-          position: i + 1,
+      const results = [];
+      for (let i = 0; i < Math.min(maxItems, items.length); i++) {
+        const item = items[i];
+        const title = extractText(item, titleSelectors);
+        if (!title) continue;
+        const priceRaw = extractText(item, priceSelectors);
+        const linkEl = item.querySelector('a[href*="mercadolibre"]') || item.querySelector('a[href]');
+        results.push({
+          position: results.length + 1,
           title,
-          price: price ? `$${price}` : null,
-          url,
-        };
-
-        products.push(product);
-        logger.info(`[${i + 1}] ${title} | Precio: ${product.price ?? 'N/A'}`);
-      } catch (err) {
-        logger.error(`Error extrayendo producto ${i + 1}: ${err.message}`);
+          price: priceRaw ? '$' + priceRaw : null,
+          url: linkEl ? linkEl.href : null,
+        });
       }
+      return results;
+    }, ITEM_CSS_SELECTORS, limit);
+
+    if (products.length === 0) {
+      logger.warn('No product items found on page');
+    } else {
+      products.forEach((p) => logger.info(`[${p.position}] ${p.title} | Precio: ${p.price ?? 'N/A'}`));
     }
 
     return products;
@@ -138,49 +143,15 @@ class SearchResultsPage {
    */
   async takeScreenshot(name) {
     const screenshotsDir = path.join(__dirname, '../../screenshots');
-    if (!fs.existsSync(screenshotsDir)) {
-      fs.mkdirSync(screenshotsDir, { recursive: true });
-    }
+    if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filePath = path.join(screenshotsDir, `${name}-${timestamp}.png`);
 
     const data = await this.driver.takeScreenshot();
     fs.writeFileSync(filePath, data, 'base64');
-
     logger.info(`Screenshot saved: ${filePath}`);
     return filePath;
-  }
-
-  async _extractText(element, selectors, optional = false) {
-    for (const selector of selectors) {
-      try {
-        const el = await element.findElement(By.css(selector));
-        let text = await el.getText();
-        if (!text.trim()) {
-          text = await el.getAttribute('textContent');
-        }
-        if (text && text.trim()) return text.trim();
-      } catch {
-        // probar siguiente selector
-      }
-    }
-    if (!optional) throw new Error(`No se encontró texto con selectores: ${selectors.join(', ')}`);
-    return null;
-  }
-
-  async _extractLink(element) {
-    const linkSelectors = ['a.poly-component__title', 'a.ui-search-item__group__element', 'a'];
-    for (const selector of linkSelectors) {
-      try {
-        const el = await element.findElement(By.css(selector));
-        const href = await el.getAttribute('href');
-        if (href) return href;
-      } catch {
-        // continuar
-      }
-    }
-    return null;
   }
 }
 
