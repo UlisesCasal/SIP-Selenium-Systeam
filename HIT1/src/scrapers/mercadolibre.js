@@ -21,33 +21,53 @@ const SEARCH_QUERIES = ['Bicicleta rodado 29', 'iPhone 16 Pro Max', 'GeForce RTX
  */
 async function scrape(browserName = 'chrome', headless = false) {
   const startTime = Date.now();
-  const driver = await BrowserFactory.create(browserName, headless);
   const allResults = [];
 
-  try {
-    const homePage = new HomePage(driver);
-    const resultsPage = new SearchResultsPage(driver);
+  for (const query of SEARCH_QUERIES) {
+    logger.info(`${'─'.repeat(60)}`);
+    logger.info(`Query: "${query}" | Browser: ${browserName}`);
 
-    for (const query of SEARCH_QUERIES) {
-      logger.info(`${'─'.repeat(60)}`);
-      logger.info(`Query: "${query}" | Browser: ${browserName}`);
+    const result = await runQueryWithRetries(query, browserName, headless);
+    allResults.push(result);
 
-      const queryStart = Date.now();
+    // Throttle entre búsquedas para no saturar el servidor
+    if (SEARCH_QUERIES.indexOf(query) < SEARCH_QUERIES.length - 1) {
+      logger.info('Throttling 3s entre búsquedas...');
+      await throttle(3000);
+    }
+  }
+
+  const totalMs = Date.now() - startTime;
+  logger.info(`${'─'.repeat(60)}`);
+  logger.info(`Scraping finalizado en ${totalMs}ms | Browser: ${browserName}`);
+
+  return allResults;
+}
+
+async function runQueryWithRetries(query, browserName, headless) {
+  const MAX_ATTEMPTS = 3;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const driver = await BrowserFactory.create(browserName, headless);
+    const queryStart = Date.now();
+
+    try {
+      const homePage = new HomePage(driver);
+      const resultsPage = new SearchResultsPage(driver);
 
       await homePage.open();
       await homePage.search(query);
       await resultsPage.waitForResults();
 
       const products = await resultsPage.getProducts(5);
-
       const screenshotPath = await resultsPage.takeScreenshot(
         `${browserName}-${query.replace(/\s+/g, '_')}`
       );
-
       const elapsed = Date.now() - queryStart;
+
       logger.info(`Query "${query}" completada en ${elapsed}ms — ${products.length} productos`);
 
-      allResults.push({
+      return {
         query,
         browser: browserName,
         headless,
@@ -55,23 +75,28 @@ async function scrape(browserName = 'chrome', headless = false) {
         timestamp: new Date().toISOString(),
         screenshot: screenshotPath,
         products,
-      });
+      };
+    } catch (err) {
+      const message = (err && err.message) || '';
+      const retriable =
+        message.includes('account-verification') ||
+        message.includes('No se encontró ningún resultado');
 
-      // Throttle entre búsquedas para no saturar el servidor
-      if (SEARCH_QUERIES.indexOf(query) < SEARCH_QUERIES.length - 1) {
-        logger.info('Throttling 2s entre búsquedas...');
-        await throttle(2000);
+      logger.warn(
+        `Intento ${attempt}/${MAX_ATTEMPTS} fallido para "${query}": ${message}`
+      );
+
+      if (!retriable || attempt === MAX_ATTEMPTS) {
+        throw err;
       }
+
+      const backoffMs = attempt * 3000;
+      logger.warn(`Reintentando "${query}" en ${backoffMs}ms...`);
+      await throttle(backoffMs);
+    } finally {
+      await driver.quit();
+      logger.info(`Driver ${browserName} cerrado`);
     }
-
-    const totalMs = Date.now() - startTime;
-    logger.info(`${'─'.repeat(60)}`);
-    logger.info(`Scraping finalizado en ${totalMs}ms | Browser: ${browserName}`);
-
-    return allResults;
-  } finally {
-    await driver.quit();
-    logger.info(`Driver ${browserName} cerrado`);
   }
 }
 
