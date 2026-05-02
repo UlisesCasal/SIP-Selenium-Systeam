@@ -3,7 +3,7 @@ FROM node:24-trixie-slim AS builder
 WORKDIR /app
 # System deps para compilar wheels si hace falta
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # ============ Stage 2: runtime (browsers + app) ============
 FROM node:24-trixie-slim AS runtime
