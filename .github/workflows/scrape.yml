@@ -34,9 +34,11 @@ jobs:
 
       - name: Run tests with coverage gate
         run: |
+          mkdir -p ${{ github.workspace }}/coverage && chmod 777 ${{ github.workspace }}/coverage
           docker run --rm \
             --entrypoint npm \
             --workdir /app/HIT1 \
+            -e BROWSER=${{ matrix.browser }} \
             -v ${{ github.workspace }}/coverage:/app/HIT1/coverage \
             ml-scraper:ci \
             test -- --coverage
