@@ -1,12 +1,16 @@
 #!/usr/bin/env node
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
-const { DEFAULT_PRODUCTS, slugifyProduct } = require('../config/products');
-const { validateProducts } = require('./schema');
+const fs = require("fs");
+const path = require("path");
+const { DEFAULT_PRODUCTS, slugifyProduct } = require("../config/products");
+const { validateProducts } = require("./schema");
 
-const outputDir = path.resolve(__dirname, '../../', process.env.OUTPUT_DIR || 'output');
+const outputDir = path.resolve(
+  __dirname,
+  "../../",
+  process.env.OUTPUT_DIR || "output",
+);
 let failed = false;
 
 for (const product of DEFAULT_PRODUCTS) {
@@ -16,10 +20,10 @@ for (const product of DEFAULT_PRODUCTS) {
     failed = true;
     continue;
   }
-  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const data = JSON.parse(fs.readFileSync(file, "utf8"));
   const errors = validateProducts(data);
   if (errors.length > 0) {
-    console.error(`${file} inválido:\n${errors.join('\n')}`);
+    console.error(`${file} inválido:\n${errors.join("\n")}`);
     failed = true;
   } else {
     console.log(`${file} OK (${data.length} productos)`);

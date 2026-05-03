@@ -2,11 +2,11 @@
 
 Extiende el HIT #2 aplicando **tres filtros de MercadoLibre mediante clicks reales en el DOM** (sin modificar la URL a mano):
 
-| Filtro | Valor |
-|--------|-------|
-| Condición | Nuevo |
-| Tienda oficial | Sí |
-| Ordenar por | Más relevantes |
+| Filtro         | Valor          |
+| -------------- | -------------- |
+| Condición      | Nuevo          |
+| Tienda oficial | Sí             |
+| Ordenar por    | Más relevantes |
 
 Después de aplicar los filtros captura un screenshot guardado como `screenshots/<producto>_<browser>.png`.
 
@@ -15,7 +15,7 @@ Después de aplicar los filtros captura un screenshot guardado como `screenshots
 ## Requisitos previos
 
 | Herramienta | Versión |
-|-------------|---------|
+| ----------- | ------- |
 | Node.js     | ≥ 18    |
 | Chrome      | ≥ 112   |
 | Firefox     | ≥ 115   |
@@ -82,6 +82,7 @@ npm test
 ```
 
 Los tests validan:
+
 - Al menos un filtro fue aplicado vía click DOM
 - `condicion:Nuevo` fue aplicado exitosamente
 - ≥ 5 productos post-filtro
@@ -119,6 +120,7 @@ HIT3/
 ### Por qué clicks DOM y no URL
 
 MercadoLibre aplica filtros navegando a una nueva URL. Modificar la URL a mano funcionaría, pero no valida que el flujo de UI sea correcto. Los clicks reales verifican que:
+
 - Los elementos de filtro son visibles e interactuables
 - Los eventos JS de MercadoLibre se disparan correctamente
 - El comportamiento es idéntico al de un usuario real
@@ -135,9 +137,14 @@ MercadoLibre tiene dos generaciones de UI activas simultáneamente (sistema clá
 
 ```javascript
 const CONDITION_NUEVO_LOCATORS = [
-  [By.css('a[href*="ITEM_CONDITION-NUEVO"]'),  'css:href'],
-  [By.xpath('//li[contains(@class,"ui-search-filter-item")]' +
-            '//a[starts-with(normalize-space(),"Nuevo")]'), 'xpath:text'],
+  [By.css('a[href*="ITEM_CONDITION-NUEVO"]'), "css:href"],
+  [
+    By.xpath(
+      '//li[contains(@class,"ui-search-filter-item")]' +
+        '//a[starts-with(normalize-space(),"Nuevo")]',
+    ),
+    "xpath:text",
+  ],
 ];
 ```
 
@@ -164,14 +171,14 @@ Si ya está en "Más relevantes" (default) lo detecta y no genera un click innec
 
 ## Diferencias Chrome vs Firefox
 
-| Aspecto | Chrome | Firefox |
-|---------|--------|---------|
-| Filtro condición | ✓ | ✓ |
-| Filtro tienda oficial | ✓ | ✓ |
-| Sort | ✓ | ✓ |
-| Screenshots | PNG 1920×1080 | PNG 1920×1080 |
-| Tiempo total (con filtros) | ~15-20s | ~20-30s |
-| Diferencias DOM | Ninguna | Ninguna |
+| Aspecto                    | Chrome        | Firefox       |
+| -------------------------- | ------------- | ------------- |
+| Filtro condición           | ✓             | ✓             |
+| Filtro tienda oficial      | ✓             | ✓             |
+| Sort                       | ✓             | ✓             |
+| Screenshots                | PNG 1920×1080 | PNG 1920×1080 |
+| Tiempo total (con filtros) | ~15-20s       | ~20-30s       |
+| Diferencias DOM            | Ninguna       | Ninguna       |
 
 El tiempo aumenta vs HIT1/HIT2 porque cada filtro produce una navegación completa (click → nueva URL → resultados recargados).
 

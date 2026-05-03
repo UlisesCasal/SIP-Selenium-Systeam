@@ -7,7 +7,7 @@ Extiende el HIT #4 con mecanismos de robustez para entornos de producción: sele
 ## Requisitos previos
 
 | Herramienta | Versión |
-|-------------|---------|
+| ----------- | ------- |
 | Node.js     | ≥ 18    |
 | Chrome      | ≥ 112   |
 | Firefox     | ≥ 115   |
@@ -83,10 +83,17 @@ Los Page Objects (`HomePage`, `SearchResultsPage`, `FiltersPage`) importan desde
 Configuración: **3 intentos**, demoras de **2s, 4s, 8s** (base 2000ms, factor 2).
 
 ```javascript
-retry(fn, { retries: 3, delayMs: 2000, factor: 2, label: 'scrape:producto', logger })
+retry(fn, {
+  retries: 3,
+  delayMs: 2000,
+  factor: 2,
+  label: "scrape:producto",
+  logger,
+});
 ```
 
 Si un selector falla por timeout, el log registra:
+
 ```
 [retry] scrape:bicicleta rodado 29 falló intento 1/4 (TimeoutError). Reintentando en 2000ms
 ```
@@ -136,6 +143,7 @@ npm test
 ```
 
 Los tests validan:
+
 - La función `retry` reintenta 3 veces ante `TimeoutException`
 - El parser devuelve `null` para campos opcionales ausentes
 - El logging estructurado emite timestamp y nivel correctos
@@ -189,12 +197,12 @@ HIT5/
 
 ## Diferencias Chrome vs Firefox
 
-| Aspecto | Chrome | Firefox |
-|---------|--------|---------|
-| Selectores | ✓ | ✓ |
-| Retries | 3 intentos | 3 intentos |
-| Logging | Console + File | Console + File |
-| Tiempo total | ~20-30s | ~30-40s |
+| Aspecto      | Chrome         | Firefox        |
+| ------------ | -------------- | -------------- |
+| Selectores   | ✓              | ✓              |
+| Retries      | 3 intentos     | 3 intentos     |
+| Logging      | Console + File | Console + File |
+| Tiempo total | ~20-30s        | ~30-40s        |
 
 ---
 

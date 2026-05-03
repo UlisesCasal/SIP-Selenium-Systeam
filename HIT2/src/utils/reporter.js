@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
-const logger = require('./logger');
+const fs = require("fs");
+const path = require("path");
+const logger = require("./logger");
 
 /**
  * Genera un reporte de comparación entre resultados de dos browsers.
@@ -12,18 +12,18 @@ const logger = require('./logger');
  * @returns {{ json: string, html: string }} paths de los archivos generados
  */
 function generateComparisonReport(chromeResult, firefoxResult) {
-  const resultsDir = path.join(__dirname, '../../results');
+  const resultsDir = path.join(__dirname, "../../results");
   if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const comparison = buildComparison(chromeResult, firefoxResult);
 
   const jsonPath = path.join(resultsDir, `comparison-${timestamp}.json`);
-  fs.writeFileSync(jsonPath, JSON.stringify(comparison, null, 2), 'utf-8');
+  fs.writeFileSync(jsonPath, JSON.stringify(comparison, null, 2), "utf-8");
   logger.info(`Comparison JSON: ${jsonPath}`);
 
   const htmlPath = path.join(resultsDir, `comparison-${timestamp}.html`);
-  fs.writeFileSync(htmlPath, buildHtml(comparison), 'utf-8');
+  fs.writeFileSync(htmlPath, buildHtml(comparison), "utf-8");
   logger.info(`Comparison HTML: ${htmlPath}`);
 
   return { json: jsonPath, html: htmlPath };
@@ -40,14 +40,21 @@ function buildComparison(chrome, firefox) {
   const onlyInFirefox = firefoxTitles.filter((t) => !chromeTitles.includes(t));
 
   const timeDiffMs = Math.abs(chrome.executionMs - firefox.executionMs);
-  const fasterBrowser = chrome.executionMs <= firefox.executionMs ? 'chrome' : 'firefox';
+  const fasterBrowser =
+    chrome.executionMs <= firefox.executionMs ? "chrome" : "firefox";
 
   return {
     generatedAt: new Date().toISOString(),
     query: chrome.query,
     metrics: {
-      chrome: { executionMs: chrome.executionMs, productCount: chrome.products.length },
-      firefox: { executionMs: firefox.executionMs, productCount: firefox.products.length },
+      chrome: {
+        executionMs: chrome.executionMs,
+        productCount: chrome.products.length,
+      },
+      firefox: {
+        executionMs: firefox.executionMs,
+        productCount: firefox.products.length,
+      },
       timeDiffMs,
       fasterBrowser,
     },
@@ -57,7 +64,9 @@ function buildComparison(chrome, firefox) {
       onlyInChrome,
       onlyInFirefox,
       overlapPct: Math.round(
-        (exactMatches.length / Math.max(chromeTitles.length, firefoxTitles.length)) * 100
+        (exactMatches.length /
+          Math.max(chromeTitles.length, firefoxTitles.length)) *
+          100,
       ),
     },
     chrome: { products: chrome.products },
@@ -68,8 +77,12 @@ function buildComparison(chrome, firefox) {
 // ── HTML ───────────────────────────────────────────────────────────────────
 
 function buildHtml(c) {
-  const chromeRows = c.chrome.products.map((p) => productRow(p, c.firefox.products));
-  const firefoxRows = c.firefox.products.map((p) => productRow(p, c.chrome.products, true));
+  const chromeRows = c.chrome.products.map((p) =>
+    productRow(p, c.firefox.products),
+  );
+  const firefoxRows = c.firefox.products.map((p) =>
+    productRow(p, c.chrome.products, true),
+  );
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -126,10 +139,10 @@ function buildHtml(c) {
   <ul class="summary-list">
     <li>✅ Títulos en común: <strong>${c.titleOverlap.exactMatchCount}</strong></li>
     <li>🔵 Solo en Chrome: <strong>${c.titleOverlap.onlyInChrome.length}</strong>
-      ${c.titleOverlap.onlyInChrome.map((t) => `<br>&nbsp;&nbsp;&nbsp;• ${t}`).join('')}
+      ${c.titleOverlap.onlyInChrome.map((t) => `<br>&nbsp;&nbsp;&nbsp;• ${t}`).join("")}
     </li>
     <li>🟠 Solo en Firefox: <strong>${c.titleOverlap.onlyInFirefox.length}</strong>
-      ${c.titleOverlap.onlyInFirefox.map((t) => `<br>&nbsp;&nbsp;&nbsp;• ${t}`).join('')}
+      ${c.titleOverlap.onlyInFirefox.map((t) => `<br>&nbsp;&nbsp;&nbsp;• ${t}`).join("")}
     </li>
   </ul>
 
@@ -139,14 +152,14 @@ function buildHtml(c) {
       <h3>Chrome</h3>
       <table>
         <thead><tr><th>#</th><th>Título</th><th>Precio</th><th>Match</th></tr></thead>
-        <tbody>${chromeRows.join('')}</tbody>
+        <tbody>${chromeRows.join("")}</tbody>
       </table>
     </div>
     <div>
       <h3>Firefox</h3>
       <table>
         <thead><tr><th>#</th><th>Título</th><th>Precio</th><th>Match</th></tr></thead>
-        <tbody>${firefoxRows.join('')}</tbody>
+        <tbody>${firefoxRows.join("")}</tbody>
       </table>
     </div>
   </div>
@@ -156,14 +169,14 @@ function buildHtml(c) {
 
 function productRow(product, otherProducts) {
   const matched = otherProducts.some((p) => p.title === product.title);
-  const cls = matched ? 'match' : 'nomatch';
+  const cls = matched ? "match" : "nomatch";
   const badge = matched
     ? '<span class="badge badge-match">mismo</span>'
     : '<span class="badge badge-diff">distinto</span>';
   return `<tr class="${cls}">
     <td>${product.position}</td>
     <td>${product.title}</td>
-    <td>${product.price ?? 'N/A'}</td>
+    <td>${product.price ?? "N/A"}</td>
     <td>${badge}</td>
   </tr>`;
 }

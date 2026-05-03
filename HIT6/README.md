@@ -62,21 +62,26 @@ Tests:       24 passed
 ## Cambios respecto al HIT #5
 
 ### 1. Tests unitarios con mocks (sin browser real) ✅
+
 Los tests **no levantan Selenium**. Usan `jest.mock('selenium-webdriver')` para mockear el driver y los elementos.
 
 **`tests/unit/productParser.test.js`**
+
 - Valida que `parsePrice()` extrae números positivos
 - Valida que `parsePrice()` devuelve `null` para precios negativos
 - Valida que `toOutputProduct()` genera links que son URLs absolutas (`/^https?:\/\//i`)
 - Valida detección de envío gratis y cuotas sin interés
 
 **`tests/unit/retry.test.js`** (NUEVO)
+
 - Mockea `TimeoutException` de `selenium-webdriver`
 - Verifica que `retry()` dispara exactamente 3 veces ante fallos transitorios
 - Verifica que `retry()` tiene éxito en el segundo intento tras fallo inicial
 
 ### 2. Gate de cobertura al 70% ✅
+
 `jest.config.js` tiene configurado:
+
 ```javascript
 collectCoverage: true,
 coverageDirectory: 'coverage',
@@ -90,24 +95,31 @@ coverageThreshold: {
   }
 }
 ```
+
 Si la cobertura baja de 70%, `npm test` falla automáticamente.
 
 ### 3. Validación de schema JSON ✅
+
 `tests/unit/schema.test.js` valida:
+
 - Campos requeridos presentes
 - Tipos correctos (números, strings, booleanos)
 - Links deben ser URLs absolutas
 - Precios deben ser números enteros positivos
 
 ### 4. Test de integración con validación estricta ✅
+
 `tests/integration/scraper.integration.test.js` (solo con `RUN_E2E=true`):
+
 - Extrae al menos **10 resultados por producto**
 - Valida que todos los precios son números **positivos**
 - Valida que todos los links son **URLs absolutas**
 - Ejecuta validación de schema sobre los JSON generados
 
 ### 5. Pipeline de CI (GitHub Actions) ✅
+
 `.github/workflows/hit6.yml`:
+
 - Matriz Chrome/Firefox
 - Detecta secrets con `gitleaks`
 - Corre tests con cobertura (`npm test -- --coverage`)
@@ -196,12 +208,12 @@ Tests:       24 passed, 24 total
 
 ## Diferencias Chrome vs Firefox
 
-| Aspecto | Chrome | Firefox |
-|---------|--------|---------|
-| Tests unitarios | ✓ (mocks) | ✓ (mocks) |
-| Coverage gate 70% | ✓ | ✓ |
-| Retries | 3 intentos | 3 intentos |
-| Integración E2E | ✓ (con RUN_E2E=true) | ✓ (con RUN_E2E=true) |
+| Aspecto           | Chrome               | Firefox              |
+| ----------------- | -------------------- | -------------------- |
+| Tests unitarios   | ✓ (mocks)            | ✓ (mocks)            |
+| Coverage gate 70% | ✓                    | ✓                    |
+| Retries           | 3 intentos           | 3 intentos           |
+| Integración E2E   | ✓ (con RUN_E2E=true) | ✓ (con RUN_E2E=true) |
 
 ---
 

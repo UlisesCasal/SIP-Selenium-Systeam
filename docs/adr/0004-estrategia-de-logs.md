@@ -6,12 +6,12 @@
 
 ## Contexto
 
-A medida que el sistema de extracción crece, realizar el seguimiento de lo que ocurre durante la ejecución (especialmente cuando falla un selector o hay un error de red) se vuelve complejo. 
+A medida que el sistema de extracción crece, realizar el seguimiento de lo que ocurre durante la ejecución (especialmente cuando falla un selector o hay un error de red) se vuelve complejo.
 El enfoque tradicional de usar múltiples llamadas a `console.log()`, `console.warn()` o `console.error()` dispersas por todo el código genera una salida estándar caótica. No proporciona un formato consistente, carece de marcas de tiempo precisas y no permite filtrar fácilmente por nivel de severidad (por ejemplo, ver solo los errores sin el ruido de los mensajes informativos). Además, la cátedra exige explícitamente el uso de logs estructurados como buena práctica.
 
 ## Decisión
 
-Decidimos implementar un módulo centralizado para el manejo de logs, ubicado en `src/utils/logger.js`[cite: 1]. 
+Decidimos implementar un módulo centralizado para el manejo de logs, ubicado en `src/utils/logger.js`[cite: 1].
 
 A partir de esta decisión, se prohíbe el uso de `console.log()` crudo en la lógica de negocio y en los scrapers. Cualquier evento, advertencia o error que deba registrarse debe pasar por nuestra utilidad `logger`, la cual se encarga de estandarizar el formato de salida (incluyendo timestamps, nivel de severidad y el mensaje).
 

@@ -6,7 +6,7 @@
 
 ## Contexto
 
-Para mantener la calidad del código y asegurar que nuestro scraper funcione correctamente, implementamos validaciones automáticas (linter, detección de secretos y tests con Jest). Ejecutar la suite completa de pruebas E2E (End-to-End) con Selenium en múltiples navegadores consume mucho tiempo y recursos. 
+Para mantener la calidad del código y asegurar que nuestro scraper funcione correctamente, implementamos validaciones automáticas (linter, detección de secretos y tests con Jest). Ejecutar la suite completa de pruebas E2E (End-to-End) con Selenium en múltiples navegadores consume mucho tiempo y recursos.
 Si delegamos todas las validaciones a la Integración Continua (CI) en GitHub Actions, el tiempo de feedback es muy lento (el desarrollador debe pushear y esperar varios minutos para saber si rompió algo básico). Por otro lado, obligar al desarrollador a correr toda la suite E2E localmente antes de cada commit genera fricción y demora el desarrollo.
 
 ## Decisión

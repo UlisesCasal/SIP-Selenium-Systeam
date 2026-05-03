@@ -34,18 +34,20 @@ class HomePage {
       throw new Error("BOT DETECTADO: Mercado Libre pide login.");
     }
 
-    const combinedSelector = MERCADOLIBRE.home.searchInput.map(loc => loc.value).join(', ');
+    const combinedSelector = MERCADOLIBRE.home.searchInput
+      .map((loc) => loc.value)
+      .join(", ");
 
     try {
       const element = await this.driver.wait(
         until.elementLocated(By.css(combinedSelector)),
-        timeout
+        timeout,
       );
-      
+
       await this.driver
         .wait(until.elementIsVisible(element), 3000)
         .catch(() => {});
-        
+
       return element;
     } catch (error) {
       throw new Error(`No se encontró el input de búsqueda tras ${timeout}ms.`);

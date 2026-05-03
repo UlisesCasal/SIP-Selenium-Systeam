@@ -11,7 +11,7 @@ Incluye un comparador cross-browser que corre ambos navegadores y genera un repo
 ## Requisitos previos
 
 | Herramienta | Versión |
-|-------------|---------|
+| ----------- | ------- |
 | Node.js     | ≥ 18    |
 | Chrome      | ≥ 112   |
 | Firefox     | ≥ 115   |
@@ -113,7 +113,7 @@ En HIT #2 se separa en dos clases:
 
 ```js
 // 1. Solo config — se puede instanciar en tests sin Selenium
-const opts = new BrowserOptions({ browser: 'firefox', headless: true });
+const opts = new BrowserOptions({ browser: "firefox", headless: true });
 
 // 2. Factory pura — solo construye el driver
 const driver = await BrowserFactory.create(opts);
@@ -130,6 +130,7 @@ HEADLESS env var >  --headless CLI >  false
 ```
 
 Esto permite que el mismo script funcione:
+
 - Localmente: `node scraper.js firefox`
 - En CI: `BROWSER=firefox HEADLESS=true node scraper.js`
 - Con npm scripts: `npm run scrape:firefox:headless`
@@ -142,14 +143,14 @@ Esto permite que el mismo script funcione:
 
 ## Comparación Chrome vs Firefox
 
-| Aspecto | Chrome | Firefox | Diferencia |
-|---------|--------|---------|------------|
-| Headless API | `--headless=new` | `--headless` | Flag distinta; mismo comportamiento |
-| Tiempo promedio | ~8s | ~11-14s | Firefox ~1.5x más lento arrancando |
-| Selectores DOM | `poly-component__title` | `poly-component__title` | Sin diferencia |
-| Resultados retornados | 5 | 5 | Idéntico |
-| Solapamiento de títulos | — | — | ≥ 80% (mismos productos, distinto orden posible) |
-| Precios | Mismo formato | Mismo formato | Sin diferencia |
+| Aspecto                 | Chrome                  | Firefox                 | Diferencia                                       |
+| ----------------------- | ----------------------- | ----------------------- | ------------------------------------------------ |
+| Headless API            | `--headless=new`        | `--headless`            | Flag distinta; mismo comportamiento              |
+| Tiempo promedio         | ~8s                     | ~11-14s                 | Firefox ~1.5x más lento arrancando               |
+| Selectores DOM          | `poly-component__title` | `poly-component__title` | Sin diferencia                                   |
+| Resultados retornados   | 5                       | 5                       | Idéntico                                         |
+| Solapamiento de títulos | —                       | —                       | ≥ 80% (mismos productos, distinto orden posible) |
+| Precios                 | Mismo formato           | Mismo formato           | Sin diferencia                                   |
 
 ### Por qué Firefox puede ser más lento
 

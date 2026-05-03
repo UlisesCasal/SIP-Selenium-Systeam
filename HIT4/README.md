@@ -69,16 +69,16 @@ npm run scrape
 
 ## Variables de entorno
 
-| Variable | Default | Descripción |
-| --- | --- | --- |
-| `BROWSER` | `chrome` | `chrome` o `firefox` |
-| `HEADLESS` | `false` | Ejecuta sin UI visible |
-| `PRODUCTS` | productos del enunciado | Separados por `|` |
-| `RESULT_LIMIT` | `10` | Cantidad por producto |
-| `MAX_RETRIES` | `2` | Reintentos por producto |
-| `APPLY_FILTERS` | `true` | Aplica filtros heredados del HIT3 |
-| `OUTPUT_DIR` | `output` | Carpeta de JSON |
-| `LOG_DIR` | `logs` | Carpeta de logs |
+| Variable        | Default                 | Descripción                       |
+| --------------- | ----------------------- | --------------------------------- | --- |
+| `BROWSER`       | `chrome`                | `chrome` o `firefox`              |
+| `HEADLESS`      | `false`                 | Ejecuta sin UI visible            |
+| `PRODUCTS`      | productos del enunciado | Separados por `                   | `   |
+| `RESULT_LIMIT`  | `10`                    | Cantidad por producto             |
+| `MAX_RETRIES`   | `2`                     | Reintentos por producto           |
+| `APPLY_FILTERS` | `true`                  | Aplica filtros heredados del HIT3 |
+| `OUTPUT_DIR`    | `output`                | Carpeta de JSON                   |
+| `LOG_DIR`       | `logs`                  | Carpeta de logs                   |
 
 ## Formato JSON
 
