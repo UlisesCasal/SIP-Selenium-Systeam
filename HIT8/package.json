@@ -1,0 +1,29 @@
+{
+  "name": "hit6-mercadolibre-robust",
+  "version": "1.0.0",
+  "description": "HIT #6 — Robustez: selectores centralizados, retries con backoff y logging estructurado",
+  "main": "src/scrapers/mercadolibre.js",
+  "scripts": {
+    "scrape": "node src/scrapers/mercadolibre.js",
+    "scrape:headless": "node -e \"process.env.HEADLESS='true'; require('./src/scrapers/mercadolibre.js')\"",
+    "scrape:chrome": "node -e \"process.env.BROWSER='chrome'; require('./src/scrapers/mercadolibre.js')\"",
+    "scrape:firefox": "node -e \"process.env.BROWSER='firefox'; require('./src/scrapers/mercadolibre.js')\"",
+    "scrape:both:headless": "node -e \"process.env.HEADLESS='true'; process.env.BROWSER='chrome'; require('./src/scrapers/mercadolibre.js')\" && node -e \"process.env.HEADLESS='true'; process.env.BROWSER='firefox'; require('./src/scrapers/mercadolibre.js')\"",
+    "test": "jest --forceExit --coverage",
+    "test:unit": "jest tests/unit --forceExit --coverage",
+    "test:integration": "jest tests/integration --forceExit --coverage",
+    "validate": "node src/utils/validate-output.js"
+  },
+  "dependencies": {
+    "pg": "^8.20.0",
+    "selenium-webdriver": "^4.27.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
