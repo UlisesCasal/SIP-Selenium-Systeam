@@ -15,25 +15,33 @@ class BrowserFactory {
       case 'chrome': {
         const options = new chrome.Options();
 
-        // Stealth flags solicitados
         options.excludeSwitches('enable-automation');
         options.addArguments('--disable-blink-features=AutomationControlled');
-        options.addArguments('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        options.addArguments('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
 
         if (headless) {
-          // --headless=new: Chrome 112+ nueva implementación headless
           options.addArguments('--headless=new');
         }
         options.addArguments(
           '--no-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
-          '--window-size=1920,1080'
+          '--window-size=1920,1080',
+          '--disable-features=ChromeWhatsNewUI',
+          '--lang=es-AR',
         );
         driver = await new Builder()
           .forBrowser('chrome')
           .setChromeOptions(options)
           .build();
+
+        // Oculta navigator.webdriver en cada nueva página (anti-bot detection)
+        await driver.sendDevToolsCommand('Page.addScriptToEvaluateOnNewDocument', {
+          source: `
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            window.chrome = { runtime: {} };
+          `,
+        });
         break;
       }
 
@@ -43,6 +51,10 @@ class BrowserFactory {
           options.addArguments('--headless');
         }
         options.addArguments('--width=1920', '--height=1080');
+        // Oculta webdriver en Firefox
+        options.setPreference('dom.webdriver.enabled', false);
+        options.setPreference('useAutomationExtension', false);
+        options.setPreference('intl.accept_languages', 'es-AR, es');
         driver = await new Builder()
           .forBrowser('firefox')
           .setFirefoxOptions(options)

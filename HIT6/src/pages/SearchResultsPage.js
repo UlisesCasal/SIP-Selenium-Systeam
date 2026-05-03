@@ -1,9 +1,13 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { until } = require('selenium-webdriver');
 const ProductParser = require('../parsers/ProductParser');
 const logger = require('../utils/logger');
 const MERCADOLIBRE = require('../config/selectors');
+
+const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || '/app/screenshots';
 
 class SearchResultsPage {
   constructor(driver, explicitWait = 20000) {
@@ -23,6 +27,7 @@ class SearchResultsPage {
       logger.info(`[SearchResultsPage] Resultados cargados correctamente en el DOM.`);
       return;
     } catch (e) {
+      await this._captureFailureSnapshot();
       throw new Error(`No se encontraron resultados tras ${this.explicitWait}ms.`);
     }
   }
@@ -102,6 +107,22 @@ class SearchResultsPage {
     
     logger.error(`[SearchResultsPage] Selector falló en "${productName}" [${browser}] - campo: ${field}`);
     throw new Error(`Texto requerido no encontrado.`);
+  }
+
+  async _captureFailureSnapshot() {
+    try {
+      const url = await this.driver.getCurrentUrl();
+      const title = await this.driver.getTitle();
+      logger.warn(`[SearchResultsPage] Página actual — URL: ${url} | Título: "${title}"`);
+
+      fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+      const file = path.join(SCREENSHOTS_DIR, `failure-${Date.now()}.png`);
+      const png = await this.driver.takeScreenshot();
+      fs.writeFileSync(file, png, 'base64');
+      logger.warn(`[SearchResultsPage] Screenshot guardado: ${file}`);
+    } catch (err) {
+      logger.warn(`[SearchResultsPage] No se pudo capturar snapshot: ${err.message}`);
+    }
   }
 
   async _extractLink(element, productName = 'unknown', browser = 'unknown') {

@@ -26,10 +26,12 @@ jobs:
 
       - name: Run scraper (headless ${{ matrix.browser }})
         run: |
+          mkdir -p ${{ github.workspace }}/screenshots
           docker run --rm \
             -e BROWSER=${{ matrix.browser }} \
             -e HEADLESS=true \
             -v ${{ github.workspace }}/output:/app/output \
+            -v ${{ github.workspace }}/screenshots:/app/screenshots \
             ml-scraper:ci
 
       - name: Run tests with coverage gate
