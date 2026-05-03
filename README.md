@@ -113,3 +113,12 @@ image.index.v1+json                             sha256:0a4d133f1e7f118d9c556841c
 # Cómo correr Parte 1 + Parte 2 (Docker, k3s/k3d)
 
 # Comandos exactos para reproducir el demo del Hit #7
+
+# Autoverificación
+- [] Tests + cobertura ≥ 70 %
+- [] Linter + formatter (los mismos que corren en pre-commit)
+- [] Detección de secrets
+- [] Manifests Kubernetes válidos
+- [] Build de la imagen Docker
+- [] E2E completo en cluster local
+- [] Verificar que los retries del Hit #5 efectivamente disparan
