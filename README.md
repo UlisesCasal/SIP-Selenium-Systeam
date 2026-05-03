@@ -112,7 +112,76 @@ image.index.v1+json                             sha256:0a4d133f1e7f118d9c556841c
 ```
 # Cómo correr Parte 1 + Parte 2 (Docker, k3s/k3d)
 
-# Comandos exactos para reproducir el demo del Hit #7
+### Parte 1: Docker
+1. **Construir la imagen localmente:**
+```bash
+docker build -t ml-scraper:latest .
+```
+2. **Ejecutar el contenedor (Prueba local):**
+```bash
+docker run --rm -e BROWSER="chrome" -e HEADLESS="true" -e LOG_LEVEL="INFO" -e PRODUCTS="bicicleta rodado 29`niPhone 16 Pro Max`nGeForce RTX 5090" -v ${PWD}/output:/app/output ml-scraper:latest
+```
+### Parte 2: Kubernetes (k3s/k3d)
+1. **Cargar la imagen al cluster:**
+```bash
+k3d image import ml-scraper:latest -c scraper
+```
+
+2. **Aplicar los manifiestos (ConfigMap, PVC, Jobs):**
+```bash
+kubectl apply -f HIT7/k8s/
+```
+
+3. **Validar el estado de los recursos:**
+```bash
+kubectl get all,pvc
+```
+## Cómo ejecutar el proyecto: Demostración Hit #7
+
+### Prerrequisitos
+- [ ] Docker instalado.
+- [ ] kubectl instalado.
+- [ ] k3d instalado.
+- [ ] Un cluster llamado `scraper` en ejecución.
+
+### Parte 1: Construcción (Docker & k3d)
+
+Construye la imagen localmente:
+```bash
+docker build -t ml-scraper:latest .
+```
+
+Inyecta la imagen en el cluster local:
+```bash
+k3d image import ml-scraper:latest -c scraper
+```
+
+### Parte 2: Despliegue (Kubernetes)
+
+Aplica todos los manifiestos (ConfigMap, PVC, Job, CronJob):
+```bash
+kubectl apply -f HIT7/k8s/
+```
+
+*Nota: El Job de un solo uso (`scraper-once`) comenzará a ejecutarse inmediatamente.*
+
+### Verificación y Comandos Útiles
+
+Ver que el pod se está ejecutando:
+```bash
+kubectl get pods -w
+```
+
+Comprobar que el volumen se creó exitosamente:
+```bash
+kubectl get pvc
+```
+
+Ver el Job completado y el CronJob activo:
+```bash
+kubectl get jobs
+kubectl get cronjobs
+```
 
 # Autoverificación
 - [] Tests + cobertura ≥ 70 %
