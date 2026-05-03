@@ -8,39 +8,15 @@ const logger = require("./logger");
 
 /**
  * Browser Factory — única responsabilidad: construir instancias de WebDriver.
- *
- * Refactoring respecto a HIT #1:
- *   - `create()` ahora recibe un BrowserOptions en lugar de parámetros sueltos.
- *   - `fromCli()` es el punto de entrada estándar: lee env/args y construye el driver.
- *   - Los adaptadores por browser están en métodos privados, haciendo el switch más limpio.
- *   - Se loguean las capabilities detectadas para facilitar la comparación Chrome/Firefox.
  */
 class BrowserFactory {
-  /**
-   * Lee la configuración de env/args y crea el driver.
-   * Forma idiomática para los scripts de scraping.
-   *
-   * @example
-   *   // BROWSER=firefox node scraper.js
-   *   // node scraper.js firefox --headless
-   *   const driver = await BrowserFactory.fromCli();
-   *
-   * @returns {Promise<import('selenium-webdriver').WebDriver>}
-   */
   static async fromCli() {
     const opts = BrowserOptions.fromCli();
     return BrowserFactory.create(opts);
   }
 
-  /**
-   * Crea un WebDriver configurado a partir de un BrowserOptions.
-   *
-   * @param {BrowserOptions} options
-   * @returns {Promise<import('selenium-webdriver').WebDriver>}
-   */
   static async create(options) {
     if (!(options instanceof BrowserOptions)) {
-      // Permite pasar un plain object por conveniencia en tests
       options = new BrowserOptions(options);
     }
 
@@ -59,7 +35,7 @@ class BrowserFactory {
     }
 
     await driver.manage().setTimeouts({
-      implicit: 0, // 0 = usamos sólo explicit waits
+      implicit: 0,
       pageLoad: options.pageLoadTimeout,
       script: options.scriptTimeout,
     });
@@ -68,13 +44,10 @@ class BrowserFactory {
     return driver;
   }
 
-  // ── Constructores por browser ──────────────────────────────────────────────
-
   static async _buildChrome(opts) {
     const options = new chrome.Options();
 
     if (opts.headless) {
-      // --headless=new: implementación headless moderna (Chrome ≥ 112).
       options.addArguments("--headless=new");
     }
 
@@ -83,13 +56,23 @@ class BrowserFactory {
       "--disable-dev-shm-usage",
       "--disable-gpu",
       `--window-size=${opts.windowWidth},${opts.windowHeight}`,
+      "--disable-blink-features=AutomationControlled"
     );
 
-    // eager: retorna cuando DOMContentLoaded dispara, sin esperar imágenes/JS diferido.
-    // Evita el timeout del renderer en sitios pesados como MercadoLibre.
+    options.excludeSwitches("enable-automation");
     options.setPageLoadStrategy("eager");
 
-    return new Builder().forBrowser("chrome").setChromeOptions(options).build();
+    const driver = await new Builder()
+      .forBrowser("chrome")
+      .setChromeOptions(options)
+      .build();
+
+    // Stealth: ocultar navigator.webdriver
+    await driver.executeScript(
+      "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    );
+
+    return driver;
   }
 
   static async _buildFirefox(opts) {
@@ -101,9 +84,11 @@ class BrowserFactory {
 
     options.addArguments(
       `--width=${opts.windowWidth}`,
-      `--height=${opts.windowHeight}`,
+      `--height=${opts.windowHeight}`
     );
 
+    options.setPreference("dom.webdriver.enabled", false);
+    options.setPreference("useAutomationExtension", false);
     options.setPageLoadStrategy("eager");
 
     return new Builder()
@@ -111,8 +96,6 @@ class BrowserFactory {
       .setFirefoxOptions(options)
       .build();
   }
-
-  // ── Diagnóstico ────────────────────────────────────────────────────────────
 
   static async _logCapabilities(driver, browserName) {
     try {

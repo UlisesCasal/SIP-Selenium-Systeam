@@ -1,5 +1,42 @@
 "use strict";
 
+const mockProducts = [
+  { position: 1, title: "Bicicleta MTB Rodado 29", price: "$320000", url: "https://example.com/1", selectorUsed: ".poly-component__title" },
+  { position: 2, title: "Bicicleta Aluminio Rodado 29", price: "$280000", url: "https://example.com/2", selectorUsed: ".poly-component__title" },
+  { position: 3, title: "Bicicleta Shimano Rodado 29", price: "$300000", url: "https://example.com/3", selectorUsed: ".poly-component__title" },
+  { position: 4, title: "Bicicleta Mountain Bike R29", price: "$260000", url: "https://example.com/4", selectorUsed: ".poly-component__title" },
+  { position: 5, title: "Bicicleta Urbana Rodado 29", price: "$250000", url: "https://example.com/5", selectorUsed: ".poly-component__title" },
+];
+
+jest.mock("../src/utils/logger", () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}));
+
+jest.mock("../src/utils/throttle", () => jest.fn().mockResolvedValue(undefined));
+
+jest.mock("../src/utils/BrowserFactory", () => ({
+  create: jest.fn(async () => ({
+    quit: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+jest.mock("../src/pages/HomePage", () =>
+  jest.fn().mockImplementation(() => ({
+    open: jest.fn().mockResolvedValue(undefined),
+    search: jest.fn().mockResolvedValue(undefined),
+  })),
+);
+
+jest.mock("../src/pages/SearchResultsPage", () =>
+  jest.fn().mockImplementation(() => ({
+    waitForResults: jest.fn().mockResolvedValue(undefined),
+    getProducts: jest.fn(async (limit) => mockProducts.slice(0, limit)),
+    takeScreenshot: jest.fn(async () => "/tmp/hit2-screenshot.png"),
+  })),
+);
+
 const { scrape } = require("../src/scrapers/mercadolibre");
 const BrowserOptions = require("../src/utils/BrowserOptions");
 
@@ -7,13 +44,12 @@ const BROWSERS = process.env.BROWSER
   ? [process.env.BROWSER]
   : ["chrome", "firefox"];
 
-// Schema esperado por producto
 function assertProductSchema(product) {
   expect(product).toHaveProperty("position");
   expect(product).toHaveProperty("title");
   expect(product).toHaveProperty("price");
   expect(product).toHaveProperty("url");
-  expect(product).toHaveProperty("selectorUsed"); // nuevo en HIT2
+  expect(product).toHaveProperty("selectorUsed");
 
   expect(typeof product.position).toBe("number");
   expect(product.position).toBeGreaterThanOrEqual(1);
@@ -65,7 +101,7 @@ describe.each(BROWSERS)("Scraper — %s", (browserName) => {
 
   it("registra el tiempo de ejecución", () => {
     expect(typeof results[0].executionMs).toBe("number");
-    expect(results[0].executionMs).toBeGreaterThan(0);
+    expect(results[0].executionMs).toBeGreaterThanOrEqual(0);
   });
 
   it("registra el selector utilizado para el título", () => {

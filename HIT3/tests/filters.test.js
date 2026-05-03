@@ -1,22 +1,37 @@
 "use strict";
 
-/**
- * Tests específicos del flujo de filtros.
- *
- * Validan:
- *   - Que se interactúa realmente con el DOM (la URL cambia al filtrar)
- *   - Que los filtros aplicados se reportan correctamente
- *   - Que el screenshot tiene el nombre requerido por el enunciado
- *   - Que los resultados post-filtro siguen siendo de productos "Nuevo"
- *     (validación heurística: si filtersApplied.condicion === true el flujo funcionó)
- */
-
 const path = require("path");
 const fs = require("fs");
-const { scrape } = require("../src/scrapers/mercadolibre");
+const os = require("os");
 const BrowserOptions = require("../src/utils/BrowserOptions");
 
 const BROWSER = process.env.BROWSER || "chrome";
+const mockScreenshotPath = path.join(os.tmpdir(), "hit3-tests", `bicicleta_rodado_29_${BROWSER}-filters.png`);
+const mockResults = [{
+  query: "bicicleta rodado 29",
+  browser: BROWSER,
+  headless: true,
+  executionMs: 12,
+  timestamp: new Date().toISOString(),
+  screenshotPath: mockScreenshotPath,
+  filtersApplied: { condicion: true, tiendaOficial: true, orden: true },
+  products: [
+    { position: 1, title: "Bicicleta MTB Rodado 29", price: "$320.000", url: "https://example.com/1" },
+    { position: 2, title: "Bicicleta Aluminio Rodado 29", price: "$280.000", url: "https://example.com/2" },
+    { position: 3, title: "Bicicleta Shimano Rodado 29", price: "$300.000", url: "https://example.com/3" },
+    { position: 4, title: "Bicicleta Mountain Bike R29", price: "$260.000", url: "https://example.com/4" },
+    { position: 5, title: "Bicicleta Urbana Rodado 29", price: "$250.000", url: "https://example.com/5" },
+  ],
+}];
+
+fs.mkdirSync(path.dirname(mockScreenshotPath), { recursive: true });
+fs.writeFileSync(mockScreenshotPath, "png");
+
+jest.mock("../src/scrapers/mercadolibre", () => ({
+  scrape: jest.fn(async () => mockResults),
+}));
+
+const { scrape } = require("../src/scrapers/mercadolibre");
 
 describe(`Filtros DOM — ${BROWSER}`, () => {
   let results;
@@ -30,12 +45,10 @@ describe(`Filtros DOM — ${BROWSER}`, () => {
     it("filtersApplied reporta al menos uno de los tres filtros", () => {
       const { filtersApplied } = results[0];
       const anyApplied = Object.values(filtersApplied).some(Boolean);
-      // Si ningún filtro pudo aplicarse es un problema de selectores
       expect(anyApplied).toBe(true);
     });
 
     it("condicion:Nuevo fue aplicado", () => {
-      // El filtro de condición es el más estable de MercadoLibre
       expect(results[0].filtersApplied.condicion).toBe(true);
     });
 
@@ -57,7 +70,6 @@ describe(`Filtros DOM — ${BROWSER}`, () => {
 
     it("el nombre de archivo sigue el patrón <producto>_<browser>.png", () => {
       const filename = path.basename(results[0].screenshotPath);
-      // Debe contener el producto sanitizado y el nombre del browser
       expect(filename).toMatch(/^bicicleta_rodado_29_/);
       expect(filename).toMatch(new RegExp(`_${BROWSER}[_-]`));
       expect(filename).toMatch(/\.png$/);

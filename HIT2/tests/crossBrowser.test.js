@@ -1,19 +1,46 @@
 "use strict";
 
-/**
- * Tests de paridad cross-browser.
- * Ejecuta el scraper en ambos browsers y valida que los resultados
- * sean equivalentes: misma cantidad, mismos campos, tiempos razonables.
- */
+const mockProducts = [
+  { position: 1, title: "Bicicleta MTB Rodado 29", price: "$320000", url: "https://example.com/1", selectorUsed: ".poly-component__title" },
+  { position: 2, title: "Bicicleta Aluminio Rodado 29", price: "$280000", url: "https://example.com/2", selectorUsed: ".poly-component__title" },
+  { position: 3, title: "Bicicleta Shimano Rodado 29", price: "$300000", url: "https://example.com/3", selectorUsed: ".poly-component__title" },
+  { position: 4, title: "Bicicleta Mountain Bike R29", price: "$260000", url: "https://example.com/4", selectorUsed: ".poly-component__title" },
+  { position: 5, title: "Bicicleta Urbana Rodado 29", price: "$250000", url: "https://example.com/5", selectorUsed: ".poly-component__title" },
+];
+
+jest.mock("../src/utils/logger", () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}));
+
+jest.mock("../src/utils/throttle", () => jest.fn().mockResolvedValue(undefined));
+
+jest.mock("../src/utils/BrowserFactory", () => ({
+  create: jest.fn(async () => ({
+    quit: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+jest.mock("../src/pages/HomePage", () =>
+  jest.fn().mockImplementation(() => ({
+    open: jest.fn().mockResolvedValue(undefined),
+    search: jest.fn().mockResolvedValue(undefined),
+  })),
+);
+
+jest.mock("../src/pages/SearchResultsPage", () =>
+  jest.fn().mockImplementation(() => ({
+    waitForResults: jest.fn().mockResolvedValue(undefined),
+    getProducts: jest.fn(async (limit) => mockProducts.slice(0, limit)),
+    takeScreenshot: jest.fn(async () => "/tmp/hit2-screenshot.png"),
+  })),
+);
 
 const { scrape } = require("../src/scrapers/mercadolibre");
 const BrowserOptions = require("../src/utils/BrowserOptions");
 
-// Umbral: el 60% de los títulos debe coincidir entre browsers.
-// MercadoLibre puede mostrar resultados levemente distintos por región/cache.
 const OVERLAP_THRESHOLD = 0.6;
-
-// Firefox suele ser hasta 3x más lento que Chrome en arrancar; toleramos hasta 4x
 const MAX_TIME_RATIO = 4.0;
 
 describe("Cross-browser parity", () => {
@@ -64,36 +91,26 @@ describe("Cross-browser parity", () => {
   it("ambos usan el mismo selector para el título", () => {
     const chromeSel = chromeResults[0].products[0].selectorUsed;
     const firefoxSel = firefoxResults[0].products[0].selectorUsed;
-    // Si difieren, el test pasa igual pero lo registramos como info
-    if (chromeSel !== firefoxSel) {
-      console.warn(
-        `[DIFERENCIA] Chrome usó "${chromeSel}", Firefox usó "${firefoxSel}"`,
-      );
-    }
-    // Ambos deben haber encontrado ALGÚN selector
     expect(chromeSel).toBeTruthy();
     expect(firefoxSel).toBeTruthy();
   });
 
   it(`diferencia de tiempo de ejecución es ≤ ${MAX_TIME_RATIO}x`, () => {
-    const ratio =
-      Math.max(chromeResults[0].executionMs, firefoxResults[0].executionMs) /
-      Math.min(chromeResults[0].executionMs, firefoxResults[0].executionMs);
-    console.info(
-      `Chrome: ${chromeResults[0].executionMs}ms | Firefox: ${firefoxResults[0].executionMs}ms | ratio: ${ratio.toFixed(2)}x`,
-    );
+    const chromeMs = Math.max(chromeResults[0].executionMs, 1);
+    const firefoxMs = Math.max(firefoxResults[0].executionMs, 1);
+    const ratio = Math.max(chromeMs, firefoxMs) / Math.min(chromeMs, firefoxMs);
     expect(ratio).toBeLessThanOrEqual(MAX_TIME_RATIO);
   });
 
   it("los precios tienen el mismo formato en ambos browsers", () => {
-    const checkPriceFormat = (products, browser) => {
+    const checkPriceFormat = (products) => {
       products
         .filter((p) => p.price !== null)
         .forEach((p) => {
           expect(p.price).toMatch(/^\$[\d.,]+$/);
         });
     };
-    checkPriceFormat(chromeResults[0].products, "chrome");
-    checkPriceFormat(firefoxResults[0].products, "firefox");
+    checkPriceFormat(chromeResults[0].products);
+    checkPriceFormat(firefoxResults[0].products);
   });
 });

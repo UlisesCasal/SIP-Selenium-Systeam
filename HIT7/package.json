@@ -1,0 +1,11 @@
+{
+  "name": "hit7-kubernetes-manifests",
+  "version": "1.0.0",
+  "description": "HIT #7 - Manifiestos Kubernetes para ejecutar el scraper",
+  "scripts": {
+    "test": "node ../node_modules/jest/bin/jest.js --forceExit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

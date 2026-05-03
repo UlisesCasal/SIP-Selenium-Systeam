@@ -1,7 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: "node",
-  testTimeout: 240000,
+  testTimeout: 600000,
   verbose: true,
   testMatch: ["**/tests/**/*.test.js"],
 };

@@ -34,7 +34,7 @@ class SearchResultsPage {
    * @param {import('selenium-webdriver').WebDriver} driver
    * @param {number} explicitWait — ms máximos para explicit waits
    */
-  constructor(driver, explicitWait = 20000) {
+  constructor(driver, explicitWait = 10000) {
     this.driver = driver;
     this.explicitWait = explicitWait;
     this._workingItemLocator = null; // se registra al encontrar items
@@ -44,20 +44,18 @@ class SearchResultsPage {
     logger.info("Waiting for search results...");
     let found = false;
 
-    for (const locator of ITEM_LOCATORS) {
-      try {
-        await this.driver.wait(
-          until.elementLocated(locator),
-          this.explicitWait,
-        );
-        this._workingItemLocator = locator;
-        found = true;
-        logger.info(`Items found with: ${locator.toString()}`);
-        break;
-      } catch {
-        // probar siguiente
+    await this.driver.wait(async () => {
+      for (const locator of ITEM_LOCATORS) {
+        const els = await this.driver.findElements(locator);
+        if (els.length > 0) {
+          this._workingItemLocator = locator;
+          found = true;
+          logger.info(`Items found with: ${locator.toString()}`);
+          return true;
+        }
       }
-    }
+      return false;
+    }, this.explicitWait).catch(() => {});
 
     if (!found) throw new Error("No search results found on page");
 

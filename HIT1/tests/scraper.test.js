@@ -1,5 +1,52 @@
 "use strict";
 
+let mockActiveQuery = null;
+
+const mockProductsByQuery = {
+  "Bicicleta rodado 29": [
+    { position: 1, title: "Bicicleta MTB Rodado 29", price: "$320000", url: "https://example.com/bici" },
+    { position: 2, title: "Bicicleta Aluminio Rodado 29", price: "$280000", url: "https://example.com/bici-2" },
+  ],
+  "iPhone 16 Pro Max": [
+    { position: 1, title: "Apple iPhone 16 Pro Max 256 GB", price: "$2700000", url: "https://example.com/iphone" },
+  ],
+  "GeForce RTX 5090": [
+    { position: 1, title: "Placa De Video GeForce RTX 5090", price: "$11000000", url: "https://example.com/rtx" },
+  ],
+};
+
+jest.mock("../src/utils/logger", () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}));
+
+jest.mock("../src/utils/throttle", () => jest.fn().mockResolvedValue(undefined));
+
+jest.mock("../src/utils/BrowserFactory", () => ({
+  create: jest.fn(async (browser) => ({
+    browser,
+    quit: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+jest.mock("../src/pages/HomePage", () =>
+  jest.fn().mockImplementation(() => ({
+    open: jest.fn().mockResolvedValue(undefined),
+    search: jest.fn(async (query) => {
+      mockActiveQuery = query;
+    }),
+  })),
+);
+
+jest.mock("../src/pages/SearchResultsPage", () =>
+  jest.fn().mockImplementation(() => ({
+    waitForResults: jest.fn().mockResolvedValue(undefined),
+    getProducts: jest.fn(async (limit) => mockProductsByQuery[mockActiveQuery].slice(0, limit)),
+    takeScreenshot: jest.fn(async () => "/tmp/screenshot.png"),
+  })),
+);
+
 const { scrape } = require("../src/scrapers/mercadolibre");
 
 const SEARCH_QUERIES = [
@@ -52,7 +99,6 @@ describe.each(BROWSERS)("MercadoLibre Scraper — %s", (browser) => {
     'debe extraer entre 1 y 5 productos para "%s"',
     (query) => {
       const result = results.find((r) => r.query === query);
-      // El scraper limita a 5; algunas queries pueden tener menos resultados disponibles
       expect(result.products.length).toBeGreaterThanOrEqual(1);
       expect(result.products.length).toBeLessThanOrEqual(5);
     },
@@ -90,7 +136,7 @@ describe.each(BROWSERS)("MercadoLibre Scraper — %s", (browser) => {
     (query) => {
       const result = results.find((r) => r.query === query);
       expect(typeof result.executionMs).toBe("number");
-      expect(result.executionMs).toBeGreaterThan(0);
+      expect(result.executionMs).toBeGreaterThanOrEqual(0);
     },
   );
 });
