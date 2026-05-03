@@ -137,7 +137,7 @@ docker build -t ml-scraper:latest .
 2. **Ejecutar el contenedor (Prueba local):**
 
 ```bash
-docker run --rm -e BROWSER="chrome" -e HEADLESS="true" -e LOG_LEVEL="INFO" -e PRODUCTS="bicicleta rodado 29`niPhone 16 Pro Max`nGeForce RTX 5090" -v ${PWD}/output:/app/output ml-scraper:latest
+docker compose up scraper
 ```
 
 ### Parte 2: Kubernetes (k3s/k3d)
@@ -216,10 +216,10 @@ kubectl get cronjobs
 
 # Autoverificación
 
-- [] Tests + cobertura ≥ 70 %
-- [] Linter + formatter (los mismos que corren en pre-commit)
-- [] Detección de secrets
-- [] Manifests Kubernetes válidos
-- [] Build de la imagen Docker
-- [] E2E completo en cluster local
-- [] Verificar que los retries del Hit #5 efectivamente disparan
+- [x] Tests + cobertura ≥ 70 %
+- [x] Linter + formatter (los mismos que corren en pre-commit)
+- [x] Detección de secrets
+- [x] Manifests Kubernetes válidos
+- [x] Build de la imagen Docker
+- [x] E2E completo en cluster local
+- [x] Verificar que los retries del Hit #5 efectivamente disparan
