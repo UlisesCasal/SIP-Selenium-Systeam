@@ -1,6 +1,6 @@
 'use strict';
 
-const { By, until } = require('selenium-webdriver');
+const { By, Key, until } = require('selenium-webdriver');
 const logger = require('../utils/logger');
 
 const BASE_URL = 'https://www.mercadolibre.com.ar';
@@ -9,12 +9,6 @@ const SEARCH_INPUT_LOCATORS = [
   By.css('input.nav-search-input'),
   By.css('input[name="as_word"]'),
   By.css('#cb1-edit'),
-];
-
-const SEARCH_BUTTON_LOCATORS = [
-  By.css('button.nav-search-btn'),
-  By.css('form.nav-search-form button[type="submit"]'),
-  By.css('button[type="submit"]'),
 ];
 
 /**
@@ -42,10 +36,8 @@ class HomePage {
     logger.info(`Searching for: "${query}"`);
     const input = await this._waitForSearchInput();
     await input.clear();
-    await input.sendKeys(query);
-
-    const button = await this._findFirst(SEARCH_BUTTON_LOCATORS);
-    await button.click();
+    // Enviamos ENTER directamente para evitar clicks interceptados por popups
+    await input.sendKeys(query, Key.ENTER);
     logger.info('Search submitted');
   }
 

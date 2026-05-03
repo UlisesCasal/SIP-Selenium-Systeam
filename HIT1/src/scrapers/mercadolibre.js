@@ -271,4 +271,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { scrape };
+module.exports = { scrape, saveResults, generateHtmlReport };
