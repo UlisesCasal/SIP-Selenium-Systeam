@@ -33,7 +33,7 @@ k3d image import ml-scraper:latest -c scraper
 ## 3. Aplicar todos los manifiestos
 
 ```bash
-kubectl apply -f k8s/
+kubectl apply -f HIT7/k8s/
 ```
 
 ## 4. Disparar el Job one-off y seguir los logs

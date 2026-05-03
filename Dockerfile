@@ -36,4 +36,4 @@ USER node
 HEALTHCHECK --interval=30s --timeout=5s \
   CMD node -e "require('selenium-webdriver'); console.log('ok')" || exit 1
 
-ENTRYPOINT ["node", "HIT1/src/scrapers/mercadolibre.js"]
+ENTRYPOINT ["node", "HIT6/src/scrapers/mercadolibre.js"]
