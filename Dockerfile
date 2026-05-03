@@ -2,8 +2,8 @@
 FROM node:24-trixie-slim AS builder
 WORKDIR /app
 # System deps para compilar wheels si hace falta
-COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts
+COPY HIT6/package*.json ./HIT6/
+RUN cd HIT6 && npm ci --omit=dev --ignore-scripts
 
 # ============ Stage 2: runtime (browsers + app) ============
 FROM node:24-trixie-slim AS runtime
@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar deps de Node desde el builder
-COPY --from=builder --chown=node:node /app/HIT1/node_modules ./HIT1/node_modules
+COPY --from=builder --chown=node:node /app/HIT6/node_modules ./HIT6/node_modules
 
 # Usuario no-root con HOME (Chrome necesita ~/.local para crashpad)
 COPY --chown=node:node . .
