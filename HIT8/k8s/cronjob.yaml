@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scraper-hourly
+spec:
+  schedule: "0 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+            - name: wait-for-postgres
+              image: postgres:16-alpine
+              command:
+                - sh
+                - -c
+                - |
+                  until pg_isready -h postgres -p 5432 -U scraper; do
+                    echo "Waiting for postgres..."
+                    sleep 2
+                  done
+                  echo "Postgres is ready!"
+          containers:
+            - name: scraper
+              image: ml-scraper:latest
+              imagePullPolicy: IfNotPresent
+              envFrom:
+                - configMapRef:
+                    name: scraper-config
+                - secretRef:
+                    name: postgres-secret
+              volumeMounts:
+                - name: output
+                  mountPath: /app/output
+          volumes:
+            - name: output
+              persistentVolumeClaim:
+                claimName: scraper-output
