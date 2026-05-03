@@ -177,15 +177,3 @@ ORDER BY scraped_at DESC, precio ASC;
   }
 }
 ```
-
----
-
-## Notas para el equipo
-
-1. **Paginación:** El scraper intenta navegar hasta 3 páginas automáticamente. Si no encuentra el botón "Siguiente", se detiene.
-
-2. **PostgreSQL en k3s:** El StatefulSet usa un `initContainer` que aplica las migraciones automáticamente al iniciar.
-
-3. **Credenciales:** Están en `k8s/postgres/secret.yaml` como `stringData`. Para producción, usar `data` con base64.
-
-4. **CronJob:** Está configurado para correr cada hora (`0 * * * *`). Se puede cambiar en `k8s/cronjob.yaml`.

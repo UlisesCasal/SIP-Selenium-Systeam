@@ -2,41 +2,57 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: scraper-hourly
+  namespace: sip-selenium
 spec:
   schedule: "0 * * * *"
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
-      backoffLimit: 2
+      backoffLimit: 4
       template:
         spec:
           restartPolicy: OnFailure
           initContainers:
-            - name: wait-for-postgres
-              image: postgres:16-alpine
-              command:
-                - sh
-                - -c
-                - |
-                  until pg_isready -h postgres -p 5432 -U scraper; do
-                    echo "Waiting for postgres..."
-                    sleep 2
-                  done
-                  echo "Postgres is ready!"
+          - name: wait-for-postgres
+            image: postgres:16-alpine
+            command:
+              - sh
+              - -c
+              - |
+                until nc -z postgres 5432; do
+                  echo "Esperando a que el puerto 5432 de postgres responda..."
+                  sleep 2
+                done
+                echo "Postgres aceptando conexiones!"
           containers:
-            - name: scraper
-              image: ml-scraper:latest
-              imagePullPolicy: IfNotPresent
-              envFrom:
-                - configMapRef:
-                    name: scraper-config
-                - secretRef:
-                    name: postgres-secret
-              volumeMounts:
-                - name: output
-                  mountPath: /app/output
+          - name: scraper
+            image: ml-scraper:latest
+            imagePullPolicy: Never
+            command:
+              - node
+              - src/scrapers/mercadolibre.js
+            env:
+              - name: MIGRATIONS_DIR
+                value: /app/migrations
+              - name: HEADLESS
+                value: "true"
+            envFrom:
+              - configMapRef:
+                  name: scraper-config
+              - secretRef:
+                  name: postgres-secret
+            volumeMounts:
+              - mountPath: /app/output
+                name: output
+              - mountPath: /app/migrations
+                name: migrations
+                readOnly: true
           volumes:
-            - name: output
-              persistentVolumeClaim:
-                claimName: scraper-output
+          - name: output
+            persistentVolumeClaim:
+              claimName: scraper-output
+          - name: migrations
+            configMap:
+              defaultMode: 420
+              name: migrations-config

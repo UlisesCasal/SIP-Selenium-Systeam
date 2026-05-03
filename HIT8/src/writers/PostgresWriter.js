@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 class PostgresWriter {
   constructor({
     host = process.env.POSTGRES_HOST || 'postgres',
-    port = process.env.POSTGRES_PORT || 5433,
+    port = process.env.POSTGRES_PORT || 5432,
     user = process.env.POSTGRES_USER || 'postgres',
     password = process.env.POSTGRES_PASSWORD || 'admin',
     database = process.env.POSTGRES_DB || 'scraper',
@@ -30,12 +30,29 @@ class PostgresWriter {
     try {
       console.log('[PostgresWriter] Intentando conectar a:', { host: this.pool.options.host, port: this.pool.options.port, user: this.pool.options.user, database: this.pool.options.database });
       await this.pool.query('SELECT 1');
+      await this._runMigrations();
       this._connected = true;
       this.logger.info('[PostgresWriter] Conectado a PostgreSQL');
     } catch (error) {
       console.log('[PostgresWriter] Error completo:', error);
       this.logger.error(`[PostgresWriter] Error conectando: ${error.message}`);
       throw error;
+    }
+  }
+
+  async _runMigrations() {
+    const fs = require('fs');
+    const path = require('path');
+    const migrationDir = process.env.MIGRATIONS_DIR || path.join(__dirname, '../../migrations');
+    if (!fs.existsSync(migrationDir)) {
+      this.logger.warn(`[PostgresWriter] Directorio de migraciones no encontrado: ${migrationDir}`);
+      return;
+    }
+    const files = fs.readdirSync(migrationDir).filter(f => f.endsWith('.sql')).sort();
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(migrationDir, file), 'utf8');
+      await this.pool.query(sql);
+      this.logger.info(`[PostgresWriter] Migración aplicada: ${file}`);
     }
   }
 
@@ -51,6 +68,7 @@ class PostgresWriter {
     for (const product of products) {
       try {
         await this.pool.query(query, [
+          productName,
           product.titulo,
           product.precio,
           product.link,

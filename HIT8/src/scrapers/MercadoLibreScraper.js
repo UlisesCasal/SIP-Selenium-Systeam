@@ -3,6 +3,7 @@
 const BrowserFactory = require('../utils/BrowserFactory');
 const logger = require('../utils/logger');
 const { retry, sleep } = require('../utils/retry');
+const { calculateStats, formatPriceStats } = require('../utils/stats');
 const HomePage = require('../pages/HomePage');
 const FiltersPage = require('../pages/FiltersPage');
 const SearchResultsPage = require('../pages/SearchResultsPage');
@@ -61,38 +62,27 @@ class MercadoLibreScraper {
   }
 
   _printPriceStats(product, products) {
-    const prices = products.map(p => p.precio).filter(p => p > 0).sort((a, b) => a - b);
-    if (prices.length === 0) {
+    const stats = calculateStats(products);
+    if (stats.min === 0 && stats.max === 0) {
       logger.warn(`[MercadoLibreScraper] Sin precios válidos para "${product}"`);
       return;
     }
 
-    const min = prices[0];
-    const max = prices[prices.length - 1];
-    const median = prices.length % 2 === 0
-      ? (prices[prices.length / 2 - 1] + prices[prices.length / 2]) / 2
-      : prices[Math.floor(prices.length / 2)];
-    const mean = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-    const variance = prices.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / prices.length;
-    const stdDev = Math.sqrt(variance);
-
-    const header = `Estadísticas de precio para "${product}" (${prices.length} resultados)`;
     const separator = '='.repeat(70);
+    const header = `Estadísticas de precio para "${product}" (${products.length} resultados)`;
+    
     const table = [
       separator,
       header,
       separator,
-      `  Mínimo     : $${min}`,
-      `  Máximo     : $${max}`,
-      `  Mediana    : $${median}`,
-      `  Desvío Std : $${stdDev.toFixed(2)}`,
+      formatPriceStats(stats),
       separator,
     ].join('\n');
 
     logger.info(`\n${table}`);
 
     if (this.writer && typeof this.writer.writeStats === 'function') {
-      this.writer.writeStats(product, { min, max, median, stdDev, count: prices.length, mean });
+      this.writer.writeStats(product, { ...stats, count: products.length });
     }
   }
 
