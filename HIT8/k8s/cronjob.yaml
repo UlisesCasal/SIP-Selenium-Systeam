@@ -2,19 +2,42 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: scraper-hourly
+  namespace: sip-selenium
 spec:
   schedule: "0 * * * *"
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
-      backoffLimit: 2
+      backoffLimit: 4
       template:
         spec:
           restartPolicy: OnFailure
           initContainers:
-            - name: wait-for-postgres
-              image: postgres:16-alpine
+          - name: wait-for-postgres
+            image: postgres:16-alpine
+            command:
+              - sh
+              - -c
+              - |
+                until nc -z postgres 5432; do
+                  echo "Esperando a que el puerto 5432 de postgres responda..."
+                  sleep 2
+                done
+                echo "Postgres aceptando conexiones!"
+          containers:
+            - name: scraper
+              image: ml-scraper:latest
+              imagePullPolicy: Never
+              envFrom:
+                - secretRef:
+                    name: postgres-secret
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
               command:
                 - sh
                 - -c
@@ -23,20 +46,26 @@ spec:
                     echo "Waiting for postgres..."
                     sleep 2
                   done
-                  echo "Postgres is ready!"
-          containers:
-            - name: scraper
-              image: ml-scraper:latest
-              imagePullPolicy: IfNotPresent
+                  psql -h postgres -U scraper -d scraperdb -c "INSERT INTO scrape_results (producto, titulo, precio, link, tienda_oficial, envio_gratis, cuotas_sin_interes, scraped_at) VALUES ('test', 'Test Product', 99999, 'http://test.com', false, true, false, NOW());"
+                  echo "Insert test completed!"
               envFrom:
                 - configMapRef:
                     name: scraper-config
                 - secretRef:
                     name: postgres-secret
+              env:
+                - name: MIGRATIONS_DIR
+                  value: /app/migrations
               volumeMounts:
                 - name: output
                   mountPath: /app/output
+                - name: migrations
+                  mountPath: /app/migrations
+                  readOnly: true
           volumes:
             - name: output
               persistentVolumeClaim:
                 claimName: scraper-output
+            - name: migrations
+              configMap:
+                name: migrations-config
