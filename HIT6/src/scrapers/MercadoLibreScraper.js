@@ -61,7 +61,8 @@ class MercadoLibreScraper {
     let filtersApplied = { condicion: false, tiendaOficial: false, orden: false };
     if (this.config.applyFilters) {
       filtersApplied = await filters.applyAllFilters();
-      await results.waitForResults();
+      // Usar _waitForResultsOrDirectSearch para recuperarse si ML redirige a account-verification
+      await this._waitForResultsOrDirectSearch(driver, results, product);
     }
 
     const products = await results.getProducts(this.config.resultLimit, product, this.config.browser);
