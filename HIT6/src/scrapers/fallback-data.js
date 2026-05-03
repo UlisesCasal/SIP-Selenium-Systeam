@@ -15,7 +15,7 @@ const FALLBACK = {
     { titulo: 'Bicicleta MTB Rodado 29 SLP 21v Negro Mate', precio: 265000, link: 'https://www.mercadolibre.com.ar/p/MLA1009', tienda_oficial: null, envio_gratis: true, cuotas_sin_interes: '3 cuotas sin interés' },
     { titulo: 'Bicicleta Rodado 29 Trek Marlin 5 Aluminio 2024', precio: 620000, link: 'https://www.mercadolibre.com.ar/p/MLA1010', tienda_oficial: 'Trek', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
   ],
-  'iPhone 16 Pro Max': [
+  'iphone 16 pro max': [
     { titulo: 'Apple iPhone 16 Pro Max 256 GB Titanio Negro', precio: 2700000, link: 'https://www.mercadolibre.com.ar/p/MLA2001', tienda_oficial: 'Apple', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
     { titulo: 'Apple iPhone 16 Pro Max 512 GB Titanio del Desierto', precio: 3200000, link: 'https://www.mercadolibre.com.ar/p/MLA2002', tienda_oficial: 'Apple', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
     { titulo: 'Apple iPhone 16 Pro Max 1 TB Titanio Blanco', precio: 3900000, link: 'https://www.mercadolibre.com.ar/p/MLA2003', tienda_oficial: 'Apple', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
@@ -27,7 +27,7 @@ const FALLBACK = {
     { titulo: 'Apple iPhone 16 Pro Max 128 GB Titanio Blanco', precio: 2500000, link: 'https://www.mercadolibre.com.ar/p/MLA2009', tienda_oficial: 'Apple', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
     { titulo: 'Apple iPhone 16 Pro Max 256 GB con Cargador y Funda', precio: 2800000, link: 'https://www.mercadolibre.com.ar/p/MLA2010', tienda_oficial: null, envio_gratis: true, cuotas_sin_interes: '6 cuotas sin interés' },
   ],
-  'GeForce RTX 5090': [
+  'geforce rtx 5090': [
     { titulo: 'MSI GeForce RTX 5090 Lightning 32GB GDDR7', precio: 11000000, link: 'https://www.mercadolibre.com.ar/p/MLA3001', tienda_oficial: 'MSI', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
     { titulo: 'ASUS ROG Strix GeForce RTX 5090 OC 32GB', precio: 12500000, link: 'https://www.mercadolibre.com.ar/p/MLA3002', tienda_oficial: 'ASUS', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
     { titulo: 'Gigabyte Aorus Master GeForce RTX 5090 32GB', precio: 11800000, link: 'https://www.mercadolibre.com.ar/p/MLA3003', tienda_oficial: 'Gigabyte', envio_gratis: true, cuotas_sin_interes: '12 cuotas sin interés' },
