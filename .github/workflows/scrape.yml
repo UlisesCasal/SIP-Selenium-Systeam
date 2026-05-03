@@ -37,9 +37,9 @@ jobs:
           mkdir -p ${{ github.workspace }}/coverage && chmod 777 ${{ github.workspace }}/coverage
           docker run --rm \
             --entrypoint npm \
-            --workdir /app/HIT1 \
+            --workdir /app/HIT6 \
             -e BROWSER=${{ matrix.browser }} \
-            -v ${{ github.workspace }}/coverage:/app/HIT1/coverage \
+            -v ${{ github.workspace }}/coverage:/app/HIT6/coverage \
             ml-scraper:ci \
             test -- --coverage
 
