@@ -1,4 +1,4 @@
-# 0006 — División de validaciones entre pre-commit local y CI remoto
+# 0002 — División de validaciones entre pre-commit local y CI remoto
 
 - **Date:** 2026-05-01
 - **Status:** Accepted
