@@ -22,6 +22,7 @@ kubectl apply -f k8s/configmap.yaml -n sip-selenium
 kubectl apply -f k8s/migrations-configmap.yaml -n sip-selenium
 kubectl apply -f k8s/pvc-scraper-output.yaml -n sip-selenium
 kubectl apply -f k8s/cronjob.yaml -n sip-selenium
+kubectl apply -f k8s/debug-pod.yaml -n sip-selenium
 
 # 4. Wait for PostgreSQL
 Write-Host "4. Waiting for PostgreSQL to be ready..." -ForegroundColor Yellow

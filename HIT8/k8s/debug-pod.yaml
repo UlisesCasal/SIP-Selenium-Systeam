@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scraper-zombie
+  namespace: sip-selenium
+spec:
+  restartPolicy: Never
+  containers:
+  - name: scraper
+    image: ml-scraper:latest
+    imagePullPolicy: Never
+    # Lo obligamos a quedarse despierto sin hacer nada por 1 hora
+    command: ["sleep", "3600"]
+    env:
+      - name: MIGRATIONS_DIR
+        value: /app/migrations
+      - name: HEADLESS
+        value: "true"
+    envFrom:
+      - configMapRef:
+          name: scraper-config
+      - secretRef:
+          name: postgres-secret
+    volumeMounts:
+      - mountPath: /app/output
+        name: output
+      - mountPath: /app/migrations
+        name: migrations
+        readOnly: true
+  volumes:
+  - name: output
+    persistentVolumeClaim:
+      claimName: scraper-output
+  - name: migrations
+    configMap:
+      name: migrations-config

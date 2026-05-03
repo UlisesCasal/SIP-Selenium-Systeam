@@ -53,6 +53,7 @@
    kubectl apply -f k8s/migrations-configmap.yaml -n sip-selenium
    kubectl apply -f k8s/pvc-scraper-output.yaml -n sip-selenium
    kubectl apply -f k8s/cronjob.yaml -n sip-selenium
+   kubectl apply -f k8s/debug-pod.yaml -n sip-selenium
    ```
 
 5. **Probar manualmente:**

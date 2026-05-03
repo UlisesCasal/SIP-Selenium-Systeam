@@ -26,46 +26,33 @@ spec:
                 done
                 echo "Postgres aceptando conexiones!"
           containers:
-            - name: scraper
-              image: ml-scraper:latest
-              imagePullPolicy: Never
-              envFrom:
-                - secretRef:
-                    name: postgres-secret
-              env:
-                - name: PGPASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: postgres-secret
-                      key: POSTGRES_PASSWORD
-              command:
-                - sh
-                - -c
-                - |
-                  until pg_isready -h postgres -p 5432 -U scraper; do
-                    echo "Waiting for postgres..."
-                    sleep 2
-                  done
-                  psql -h postgres -U scraper -d scraperdb -c "INSERT INTO scrape_results (producto, titulo, precio, link, tienda_oficial, envio_gratis, cuotas_sin_interes, scraped_at) VALUES ('test', 'Test Product', 99999, 'http://test.com', false, true, false, NOW());"
-                  echo "Insert test completed!"
-              envFrom:
-                - configMapRef:
-                    name: scraper-config
-                - secretRef:
-                    name: postgres-secret
-              env:
-                - name: MIGRATIONS_DIR
-                  value: /app/migrations
-              volumeMounts:
-                - name: output
-                  mountPath: /app/output
-                - name: migrations
-                  mountPath: /app/migrations
-                  readOnly: true
+          - name: scraper
+            image: ml-scraper:latest
+            imagePullPolicy: Never
+            command:
+              - node
+              - src/scrapers/mercadolibre.js
+            env:
+              - name: MIGRATIONS_DIR
+                value: /app/migrations
+              - name: HEADLESS
+                value: "true"
+            envFrom:
+              - configMapRef:
+                  name: scraper-config
+              - secretRef:
+                  name: postgres-secret
+            volumeMounts:
+              - mountPath: /app/output
+                name: output
+              - mountPath: /app/migrations
+                name: migrations
+                readOnly: true
           volumes:
-            - name: output
-              persistentVolumeClaim:
-                claimName: scraper-output
-            - name: migrations
-              configMap:
-                name: migrations-config
+          - name: output
+            persistentVolumeClaim:
+              claimName: scraper-output
+          - name: migrations
+            configMap:
+              defaultMode: 420
+              name: migrations-config
