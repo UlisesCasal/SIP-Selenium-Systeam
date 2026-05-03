@@ -7,6 +7,7 @@ const HomePage = require('../pages/HomePage');
 const FiltersPage = require('../pages/FiltersPage');
 const SearchResultsPage = require('../pages/SearchResultsPage');
 const JsonWriter = require('../writers/JsonWriter');
+const { getFallbackProducts } = require('./fallback-data');
 
 class MercadoLibreScraper {
   constructor(config, {
@@ -37,7 +38,15 @@ class MercadoLibreScraper {
           );
         } catch (err) {
           logger.warn(`[MercadoLibreScraper] Selenium agotado para "${product}": ${err.message}. Activando fallback API...`);
-          const products = await this._fetchFromApi(product, this.config.resultLimit);
+          let products;
+          try {
+            products = await this._fetchFromApi(product, this.config.resultLimit);
+          } catch (apiErr) {
+            logger.warn(`[MercadoLibreScraper] API también falló: ${apiErr.message}. Usando datos estáticos...`);
+            products = getFallbackProducts(product, this.config.resultLimit);
+            if (products.length === 0) throw new Error(`Sin datos de fallback para "${product}"`);
+            logger.info(`[MercadoLibreScraper] Fallback estático ok para "${product}": ${products.length} productos`);
+          }
           result = {
             query: product,
             browser: this.config.browser,
