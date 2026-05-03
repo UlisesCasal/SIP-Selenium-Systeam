@@ -15,9 +15,21 @@ class BrowserFactory {
       case 'chrome': {
         const options = new chrome.Options();
 
+        options.setPageLoadStrategy('eager');
         options.excludeSwitches('enable-automation');
         options.addArguments('--disable-blink-features=AutomationControlled');
-        options.addArguments('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        options.addArguments(
+          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
+        );
+        options.addArguments(
+          '--lang=es-AR',
+          '--accept-lang=es-AR,es,en',
+          '--disable-infobars',
+          '--disable-extensions',
+          '--disable-popup-blocking',
+          '--no-first-run',
+          '--no-default-browser-check',
+        );
 
         if (headless) {
           options.addArguments('--headless=new');
@@ -26,35 +38,28 @@ class BrowserFactory {
           '--no-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
-          '--window-size=1920,1080',
-          '--disable-features=ChromeWhatsNewUI',
-          '--lang=es-AR',
+          '--window-size=1920,1080'
         );
         driver = await new Builder()
           .forBrowser('chrome')
           .setChromeOptions(options)
           .build();
 
-        // Oculta navigator.webdriver en cada nueva página (anti-bot detection)
-        await driver.sendDevToolsCommand('Page.addScriptToEvaluateOnNewDocument', {
-          source: `
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            window.chrome = { runtime: {} };
-          `,
-        });
+        // Ocultar navigator.webdriver en cada nuevo documento (CDP)
+        await driver.sendDevToolsCommand(
+          'Page.addScriptToEvaluateOnNewDocument',
+          { source: 'Object.defineProperty(navigator,"webdriver",{get:()=>undefined});' }
+        ).catch(() => {});
         break;
       }
 
       case 'firefox': {
         const options = new firefox.Options();
+        options.setPageLoadStrategy('eager');
         if (headless) {
           options.addArguments('--headless');
         }
         options.addArguments('--width=1920', '--height=1080');
-        // Oculta webdriver en Firefox
-        options.setPreference('dom.webdriver.enabled', false);
-        options.setPreference('useAutomationExtension', false);
-        options.setPreference('intl.accept_languages', 'es-AR, es');
         driver = await new Builder()
           .forBrowser('firefox')
           .setFirefoxOptions(options)
@@ -68,6 +73,13 @@ class BrowserFactory {
         );
     }
 
+    await driver.manage().setTimeouts({
+      implicit: 0,
+      pageLoad: 30000,
+      script: 30000,
+    });
+
+    logger.info(`${browserName} driver ready`);
     return driver;
   }
 }
