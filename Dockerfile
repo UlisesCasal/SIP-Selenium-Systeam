@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar deps de Node desde el builder
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/HIT1/node_modules ./HIT1/node_modules
 
 # Usuario no-root con HOME (Chrome necesita ~/.local para crashpad)
 COPY --chown=node:node . .

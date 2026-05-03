@@ -1,4 +1,4 @@
-# 0002 — Soporte Multi-Browser simultáneo (Chrome y Firefox)
+# 0001 — Soporte Multi-Browser simultáneo (Chrome y Firefox)
 
 - **Date:** 2026-05-01
 - **Status:** Accepted

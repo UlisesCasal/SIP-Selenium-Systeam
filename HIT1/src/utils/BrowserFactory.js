@@ -23,13 +23,26 @@ class BrowserFactory {
       case 'chrome': {
         const options = new chrome.Options();
 
-        // Stealth flags solicitados
+        // Page load 'eager' = retorna apenas DOMContentLoaded, sin esperar
+        // imágenes/ads/analytics. Crítico para sitios pesados como ML.
+        options.setPageLoadStrategy('eager');
+
         options.excludeSwitches('enable-automation');
         options.addArguments('--disable-blink-features=AutomationControlled');
-        options.addArguments('--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        options.addArguments(
+          '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
+        );
+        options.addArguments(
+          '--lang=es-AR',
+          '--accept-lang=es-AR,es,en',
+          '--disable-infobars',
+          '--disable-extensions',
+          '--disable-popup-blocking',
+          '--no-first-run',
+          '--no-default-browser-check',
+        );
 
         if (headless) {
-          // --headless=new: Chrome 112+ nueva implementación headless
           options.addArguments('--headless=new');
         }
         options.addArguments(
@@ -42,11 +55,19 @@ class BrowserFactory {
           .forBrowser('chrome')
           .setChromeOptions(options)
           .build();
+
+        // Ocultar navigator.webdriver en cada nuevo documento (CDP)
+        await driver.sendDevToolsCommand(
+          'Page.addScriptToEvaluateOnNewDocument',
+          { source: 'Object.defineProperty(navigator,"webdriver",{get:()=>undefined});' }
+        ).catch(() => {});
+
         break;
       }
 
       case 'firefox': {
         const options = new firefox.Options();
+        options.setPageLoadStrategy('eager');
         if (headless) {
           options.addArguments('--headless');
         }
