@@ -14,13 +14,19 @@ class HomePage {
   }
 
   async open() {
-    logger.info(`[HomePage] Abriendo ${BASE_URL}`);
+    logger.info("[HomePage] Abriendo página", {
+      event: "page_open",
+      url: BASE_URL,
+    });
     await this.driver.get(BASE_URL);
     await this._waitForSearchInput();
   }
 
   async search(query) {
-    logger.info(`[HomePage] Buscando "${query}"`);
+    logger.info("[HomePage] Iniciando búsqueda", {
+      event: "search_start",
+      query: query,
+    });
     const input = await this._waitForSearchInput();
     await input.clear();
     await input.sendKeys(query, Key.ENTER);

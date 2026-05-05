@@ -26,7 +26,8 @@ class SearchResultsPage {
         this.explicitWait,
       );
       logger.info(
-        `[SearchResultsPage] Resultados cargados correctamente en el DOM.`,
+        "[SearchResultsPage] Resultados cargados",
+        { event: "results_loaded", selector: combinedSelector }
       );
       return;
     } catch (e) {
@@ -40,9 +41,16 @@ class SearchResultsPage {
     const items = await this._findItems();
     const products = [];
     const max = Math.min(limit, items.length);
-    logger.info(
-      `[SearchResultsPage] Extrayendo ${max}/${items.length} resultados para "${productName}" [${browser}]`,
-    );
+      logger.info(
+        "[SearchResultsPage] Extrayendo resultados",
+        {
+          event: "extract_start",
+          productName: productName,
+          browser: browser,
+          max: max,
+          total_items: items.length,
+        }
+      );
 
     for (let index = 0; index < max; index++) {
       try {
@@ -112,11 +120,26 @@ class SearchResultsPage {
 
         products.push(product);
         logger.info(
-          `[SearchResultsPage] ${index + 1}. ${product.titulo} | ${product.precio}`,
+          "[SearchResultsPage] Producto extraído",
+          {
+            event: "product_extracted",
+            index: index + 1,
+            title: product.titulo,
+            price: product.precio,
+            productName: productName,
+            browser: browser,
+          }
         );
       } catch (error) {
         logger.warn(
-          `[SearchResultsPage] Producto ${index + 1} omitido en "${productName}" [${browser}]: ${error.message}`,
+          "[SearchResultsPage] Error extrayendo producto",
+          {
+            event: "extract_error",
+            index: index + 1,
+            productName: productName,
+            browser: browser,
+            error: error.message,
+          }
         );
       }
     }
@@ -164,7 +187,13 @@ class SearchResultsPage {
     if (optional) return null;
 
     logger.error(
-      `[SearchResultsPage] Selector falló en "${productName}" [${browser}] - campo: ${field}`,
+      "[SearchResultsPage] Selector falló",
+      {
+        event: "selector_failed",
+        productName: productName,
+        browser: browser,
+        field: field,
+      }
     );
     throw new Error(`Texto requerido no encontrado.`);
   }
@@ -181,7 +210,12 @@ class SearchResultsPage {
       }
     }
     logger.error(
-      `[SearchResultsPage] Link absoluto no encontrado en "${productName}" [${browser}]`,
+      "[SearchResultsPage] Link no encontrado",
+      {
+        event: "link_not_found",
+        productName: productName,
+        browser: browser,
+      }
     );
     throw new Error("Link absoluto no encontrado.");
   }

@@ -13,26 +13,51 @@ async function scrape(config = ScraperConfig.fromEnv()) {
 async function main() {
   try {
     const config = ScraperConfig.fromEnv();
-    logger.info("HIT #5 MercadoLibre multi-producto");
-    logger.info(
-      `browser=${config.browser} headless=${config.headless} limit=${config.resultLimit}`,
-    );
-    logger.info(`productos=${config.products.join(" | ")}`);
+    logger.info("HIT #5 MercadoLibre multi-producto", {
+      event: "scraper_start",
+      browser: config.browser,
+      headless: config.headless,
+      resultLimit: config.resultLimit,
+      products_count: config.products.length,
+    });
+    logger.info("Configuración cargada", {
+      browser: config.browser,
+      headless: config.headless,
+      limit: config.resultLimit,
+      products: config.products,
+    });
 
     const summary = await scrape(config);
     if (summary && Array.isArray(summary)) {
-      console.log("\nArchivos generados:");
-      summary.forEach((item) => {
-        console.log(
-          `- ${item.query}: ${item.filePath} (${item.products.length} resultados)`,
-        );
+      logger.info("Archivos generados", {
+        event: "files_generated",
+        summary: summary.map(item => ({
+          query: item.query,
+          path: item.filePath,
+          count: item.products.length
+        }))
+      });
+      logger.info("Scraping completado", {
+        event: "scraper_complete",
+        results_count: summary.length,
+        total_products: summary.reduce((acc, item) => acc + item.products.length, 0),
+      });
+      logger.info("Scraping completado", {
+        event: "scraper_complete",
+        results_count: summary.length,
+        total_products: summary.reduce((acc, item) => acc + item.products.length, 0),
       });
     } else {
-      logger.warn("El scraper terminó pero no se generó un resumen válido.");
+      logger.warn("El scraper terminó pero no se generó un resumen válido.", {
+        event: "no_summary",
+      });
     }
   } catch (error) {
-    logger.error(`Scraper falló: ${error.message}`);
-    logger.error(error.stack);
+    logger.error("Scraper falló", {
+      event: "scraper_failed",
+      error: error.message,
+      stack: error.stack,
+    });
     process.exit(1);
   }
 }

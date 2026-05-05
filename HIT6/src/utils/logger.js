@@ -18,7 +18,7 @@ function createLogger({
   const absoluteLogDir = path.resolve(__dirname, "../../", logDir);
   ensureDir(absoluteLogDir);
 
-  const fmt = winston.format.combine(
+  const fileFormat = winston.format.combine(
     winston.format.timestamp({ format: "YYYY-MM-DDTHH:mm:ssZ" }),
     winston.format.printf(({ timestamp, level: lvl, message, ...meta }) => {
       const metaStr = Object.keys(meta).length
@@ -30,9 +30,14 @@ function createLogger({
     }),
   );
 
+  const jsonFormat = winston.format.combine(
+    winston.format.timestamp({ format: "YYYY-MM-DDTHH:mm:ssZ" }),
+    winston.format.json()
+  );
+
   const transports = [
     new winston.transports.Console({
-      format: winston.format.combine(winston.format.colorize(), fmt),
+      format: jsonFormat,
     }),
     new DailyRotateFile({
       dirname: absoluteLogDir,
@@ -41,6 +46,7 @@ function createLogger({
       maxSize: "2m",
       maxFiles: 3,
       level,
+      format: fileFormat,
     }),
     new DailyRotateFile({
       dirname: absoluteLogDir,
@@ -49,10 +55,11 @@ function createLogger({
       maxSize: "2m",
       maxFiles: 3,
       level: "error",
+      format: fileFormat,
     }),
   ];
 
-  return winston.createLogger({ level, format: fmt, transports });
+  return winston.createLogger({ level, transports });
 }
 
 const logger = createLogger();
