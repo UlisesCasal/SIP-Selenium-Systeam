@@ -41,8 +41,25 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/sip2026
 
+envFromSecret: discord-webhook
+
 extraConfigmapMounts:
   - name: scraper-overview-dashboard
     configMap: scraper-overview-dashboard
     mountPath: /var/lib/grafana/dashboards/sip2026
+    readOnly: true
+  - name: scraper-alert-rules
+    configMap: scraper-alerting
+    mountPath: /etc/grafana/provisioning/alerting/alert-rules.yaml
+    subPath: alert-rules.yaml
+    readOnly: true
+  - name: scraper-contact-point
+    configMap: scraper-alerting
+    mountPath: /etc/grafana/provisioning/alerting/contact-point.yaml
+    subPath: contact-point.yaml
+    readOnly: true
+  - name: scraper-notification-policy
+    configMap: scraper-alerting
+    mountPath: /etc/grafana/provisioning/alerting/notification-policy.yaml
+    subPath: notification-policy.yaml
     readOnly: true

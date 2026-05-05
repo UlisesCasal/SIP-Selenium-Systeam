@@ -40,6 +40,26 @@ kubectl -n "$NAMESPACE" create configmap scraper-overview-dashboard \
   --from-file="scraper-overview.json=$DIR/dashboards/scraper-overview.json" \
   --dry-run=client -o yaml | kubectl apply -f -
 
+echo "→ Discord webhook secret (HIT #6)..."
+if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
+  kubectl -n "$NAMESPACE" create secret generic discord-webhook \
+    --from-literal=DISCORD_WEBHOOK_URL="$DISCORD_WEBHOOK_URL" \
+    --dry-run=client -o yaml | kubectl apply -f -
+else
+  # Secret vacío para que Grafana arranque aunque no esté configurado Discord
+  kubectl -n "$NAMESPACE" create secret generic discord-webhook \
+    --from-literal=DISCORD_WEBHOOK_URL="" \
+    --dry-run=client -o yaml | kubectl apply -f -
+  echo "  ⚠ DISCORD_WEBHOOK_URL no está seteada — alertas desactivadas"
+fi
+
+echo "→ Alerting ConfigMap (HIT #6)..."
+kubectl -n "$NAMESPACE" create configmap scraper-alerting \
+  --from-file="alert-rules.yaml=$DIR/manifests/alert-rules.yaml" \
+  --from-file="contact-point.yaml=$DIR/manifests/contact-point.yaml" \
+  --from-file="notification-policy.yaml=$DIR/manifests/notification-policy.yaml" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 echo "→ Grafana..."
 helm upgrade --install grafana grafana/grafana \
   --version 8.5.0 \
@@ -55,5 +75,9 @@ echo "✓ Promtail running"
 echo "✓ Grafana running"
 echo "✓ Datasource Loki configurado"
 echo "✓ Dashboard 'Scraper Overview' provisionado en carpeta 'SIP 2026'"
+echo "✓ Alert rules provisionadas (Alerting → Alert rules)"
+echo "✓ Contact point Discord configurado (si DISCORD_WEBHOOK_URL está seteada)"
 echo "→ Abrir http://localhost:30000   (admin / \$GRAFANA_ADMIN_PASSWORD)"
-echo "→ Guardar screenshot en: observability/screenshots/hit5-dashboard.png"
+echo "→ Screenshots requeridos:"
+echo "   observability/screenshots/hit5-dashboard.png"
+echo "   observability/screenshots/hit6-discord-alert.png"

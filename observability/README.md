@@ -143,8 +143,66 @@ En Grafana → Explore, panel **"Detected fields"** deben aparecer:
 - `observability/queries/logql-cookbook.md` con las 5 queries mínimas documentadas
 - Cada query tiene: pregunta de negocio, query LogQL, ejemplo de output, explicación
 
-### Hit #5 - Dashboard Grafana provisionado as-code
-Por implementar: construir dashboard en Grafana UI y exportar JSON a `dashboards/scraper-overview.json`
+### Hit #5 - Dashboard Grafana provisionado as-code ✅
+- `observability/dashboards/scraper-overview.json` — dashboard exportado y provisionado vía ConfigMap
+- Carpeta "SIP 2026" en Grafana con 7 paneles: 3 stat, 2 time series, 1 table, 1 logs
+- Queries Q1–Q5 del cookbook integradas
+
+**Screenshot requerido:** `observability/screenshots/hit5-dashboard.png`
+
+### Hit #6 - Alertas vía Discord (Bonus +5%) ✅
+
+#### Setup
+
+```bash
+# Setear la URL del webhook de Discord (nunca commitear este valor)
+export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+
+# Ejecutar install.sh (crea el secret y el ConfigMap automáticamente)
+export GRAFANA_ADMIN_PASSWORD='<tu-password>'
+./install.sh
+```
+
+#### Reglas provisionadas (as-code)
+
+**Archivo:** `observability/manifests/alert-rules.yaml`
+
+| Regla | Condición | Severidad |
+|-------|-----------|-----------|
+| Fallos Consecutivos | ≥2 `scraper_failed` en 10 minutos | critical |
+| Dato Desactualizado | 0 scrapes exitosos en 24h | warning |
+
+#### Cómo validar el disparo (testing acelerado)
+
+Para no esperar 24h, modificar temporalmente el umbral de la regla `scrape-stale-24h` en `alert-rules.yaml`:
+
+```yaml
+# Cambiar [24h] → [10m] y > 86400 → > 600 para prueba rápida
+expr: 'sum(count_over_time({namespace="ml-scraper", app="scraper"} | json | level="INFO" | message="Scrape completado" [10m]))'
+```
+
+Luego suspender el CronJob para que no lleguen logs nuevos:
+```bash
+kubectl -n ml-scraper patch cronjob scraper-hourly -p '{"spec":{"suspend":true}}'
+```
+
+Esperar 10 minutos → Grafana → Alerting → Alert rules debería mostrar estado "Firing" → Discord recibe la notificación.
+
+Restaurar:
+```bash
+kubectl -n ml-scraper patch cronjob scraper-hourly -p '{"spec":{"suspend":false}}'
+```
+
+#### Secret Management
+
+El webhook URL de Discord **nunca** se guarda en el repositorio. Se gestiona mediante:
+- Variable de entorno `DISCORD_WEBHOOK_URL` en el entorno local
+- Kubernetes Secret `discord-webhook` en el namespace `observability` (creado por `install.sh`)
+- `gitleaks detect` como gate en el pipeline de CI
+
+**Screenshot:** `observability/screenshots/hit6-discord-alert.png`
+
+![Discord alert](screenshots/hit6-discord-alert.png)
 
 ## Validación Post-Instalación
 

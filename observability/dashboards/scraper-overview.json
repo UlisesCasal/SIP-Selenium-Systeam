@@ -109,7 +109,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "sum(count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"INFO\" | message=\"Scrape completado\" [24h])) / sum(count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json [24h])) * 100",
+          "expr": "sum(count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"info\" | message=\"Scrape completado\" [24h])) / sum(count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json [24h])) * 100",
           "instant": true,
           "queryType": "instant",
           "refId": "A"
@@ -154,7 +154,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "topk(3, sum by (producto) (count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"ERROR\" [24h])))",
+          "expr": "topk(3, sum by (producto) (count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"error\" [24h])))",
           "instant": true,
           "queryType": "instant",
           "legendFormat": "{{producto}}",
@@ -217,7 +217,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "sum by (producto) (rate({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"WARNING\" [1m]))",
+          "expr": "sum by (producto) (rate({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"warn\" [1m]))",
           "legendFormat": "{{producto}}",
           "queryType": "range",
           "refId": "A"
@@ -342,7 +342,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "sum by (producto) (count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"ERROR\" [24h]))",
+          "expr": "sum by (producto) (count_over_time({namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"error\" [24h]))",
           "instant": true,
           "queryType": "instant",
           "legendFormat": "{{producto}}",
@@ -381,7 +381,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "{namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"INFO\" | message=\"Scrape completado\"",
+          "expr": "{namespace=\"ml-scraper\", app=\"scraper\"} | json | level=\"info\" | message=\"Scrape completado\"",
           "queryType": "range",
           "legendFormat": "",
           "refId": "A"
