@@ -100,6 +100,8 @@ helm upgrade promtail grafana/promtail \
 logger.info(`Query: "${query}" | Browser: ${browserName}`);
 ```
 
+![alt text](screenshots/logLinePlainText.png)
+
 **Después (Hit #3 - JSON estructurado):**
 ```javascript
 logger.info("Query iniciada", { 
@@ -128,6 +130,8 @@ En Grafana → Explore, panel **"Detected fields"** deben aparecer:
 - `logger`
 - `message`
 - `event` (campo estructurado agregado)
+
+![alt text](screenshots/logLineJSON.png)
 
 **Screenshots obligatorios (consigna):**
 - `observability/screenshots/hit2-labels.png` — log line plain text (antes)

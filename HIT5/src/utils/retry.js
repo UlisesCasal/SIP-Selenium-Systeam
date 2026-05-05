@@ -22,6 +22,7 @@ async function retry(operation, options = {}) {
       logger.warn(
         `[retry] ${label} falló intento ${attempt + 1}/${retries + 1} ` +
           `(${error.message}). Reintentando en ${wait}ms`,
+        { delay_ms: wait, attempt: attempt + 1, label },
       );
       await sleep(wait);
     }

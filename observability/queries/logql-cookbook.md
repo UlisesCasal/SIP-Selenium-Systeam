@@ -2,6 +2,22 @@
 
 Queries útiles para el scraper basadas en logs centralizados en Loki.
 
+## Diferencia entre Log queries y Metric queries
+
+**Log queries** (queries de logs): Devuelven logs crudos o filtrados. Se usan para inspección visual.
+- Ejemplo: `{namespace="ml-scraper"} | json | level="ERROR"`
+- No generan series temporales, solo muestran líneas de log.
+
+**Metric queries** (queries métricas): Transforman logs en métricas usando funciones como `rate()`, `count_over_time()`, `avg_over_time()`. Se usan para graficar y alertas.
+- Ejemplo: `rate({namespace="ml-scraper"} | json | level="ERROR" [5m])`
+- Generan series temporales con valores numéricos.
+
+**¿Cuándo usar cuál?**
+- Debugging rápido → Log queries
+- Dashboards, tendencias, alertas → Metric queries
+
+---
+
 ## Q1 — Top errores por producto en las últimas 24h
 
 **Pregunta**: "¿Qué producto está fallando más?" — útil para priorizar bugfixes de selectores.
@@ -18,6 +34,8 @@ sum by (producto) (
 
 **Output esperado**: Tabla con columnas `producto` y valor numérico de errores.
 
+![alt text](../screenshots/ejemploQ1.png)
+
 ---
 
 ## Q2 — Tasa de WARNINGs por minuto en la última hora
@@ -29,6 +47,8 @@ sum by (producto) (
   rate({namespace="ml-scraper", app="scraper"} | json | level="WARNING" [1m])
 )
 ```
+
+![alt text](../screenshots/ejemploQ2.png)
 
 **Por qué esta query**: `rate` es apropiado aquí porque queremos ver la velocidad de aparición de warnings (eventos por segundo), útil para dashboards en tiempo real. Ventana de [1m] suaviza fluctuaciones.
 
@@ -82,12 +102,16 @@ avg_over_time(
 **Pregunta**: "¿Hace cuánto que no scrapeo exitosamente cada producto?" — base para alertas.
 
 ```logql
-topk(1,
-  {namespace="ml-scraper", app="scraper"}
-    | json
-    | level="INFO"
-    | message="Scrape completado"
-) by (producto)
+topk by (producto) (
+  1,
+  count_over_time(
+    {namespace="ml-scraper", app="scraper"} 
+      | json 
+      | level="INFO" 
+      | message="Scrape completado"
+    [24h]
+  )
+)
 ```
 
 **Por qué esta query**: `topk(1, ...)` devuelve el log más reciente (top 1) por producto. Combinado con `by (producto)` da la última corrida exitosa de cada uno. `message="Scrape completado"` filtra solo éxitos.
@@ -113,9 +137,3 @@ sum by (level) (
 ```
 
 ---
-
-## Referencias
-
-- [LogQL Documentation - Log Queries](https://grafana.com/docs/loki/latest/query/log_queries/)
-- [LogQL Documentation - Metric Queries](https://grafana.com/docs/loki/latest/query/metric_queries/)
-- [LogQL Examples Cheatsheet](https://grafana.com/docs/loki/latest/query/query_examples/)

@@ -8,7 +8,12 @@ const DailyRotateFile = require("winston-daily-rotate-file");
 const memoryLogs = [];
 
 function ensureDir(dir) {
-  fs.mkdirSync(dir, { recursive: true });
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (e) {
+    if (e.code === 'EEXIST') return;
+    throw e;
+  }
 }
 
 function createLogger({
@@ -16,7 +21,9 @@ function createLogger({
   level = process.env.LOG_LEVEL || "info",
 } = {}) {
   const absoluteLogDir = path.resolve(__dirname, "../../", logDir);
-  ensureDir(absoluteLogDir);
+  if (logDir !== "/dev/null") {
+    ensureDir(absoluteLogDir);
+  }
 
   const fileFormat = winston.format.combine(
     winston.format.timestamp({ format: "YYYY-MM-DDTHH:mm:ssZ" }),
@@ -39,25 +46,30 @@ function createLogger({
     new winston.transports.Console({
       format: jsonFormat,
     }),
-    new DailyRotateFile({
-      dirname: absoluteLogDir,
-      filename: "scraper-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      maxSize: "2m",
-      maxFiles: 3,
-      level,
-      format: fileFormat,
-    }),
-    new DailyRotateFile({
-      dirname: absoluteLogDir,
-      filename: "error-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      maxSize: "2m",
-      maxFiles: 3,
-      level: "error",
-      format: fileFormat,
-    }),
   ];
+
+  if (logDir !== "/dev/null") {
+    transports.push(
+      new DailyRotateFile({
+        dirname: absoluteLogDir,
+        filename: "scraper-%DATE%.log",
+        datePattern: "YYYY-MM-DD",
+        maxSize: "2m",
+        maxFiles: 3,
+        level,
+        format: fileFormat,
+      }),
+      new DailyRotateFile({
+        dirname: absoluteLogDir,
+        filename: "error-%DATE%.log",
+        datePattern: "YYYY-MM-DD",
+        maxSize: "2m",
+        maxFiles: 3,
+        level: "error",
+        format: fileFormat,
+      }),
+    );
+  }
 
   return winston.createLogger({ level, transports });
 }

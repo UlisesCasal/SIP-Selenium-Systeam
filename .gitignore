@@ -4,6 +4,6 @@ coverage/
 *.log
 logs/
 results/
-screenshots/
+
 output/
 .DS_Store

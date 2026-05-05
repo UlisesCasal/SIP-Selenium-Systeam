@@ -33,6 +33,7 @@ class MercadoLibreScraper {
         const result = await retry(() => this.scrapeProduct(driver, product), {
           retries: this.config.maxRetries,
           delayMs: 2000,
+          factor: 2,
           label: `scrape:${product} [${this.config.browser}]`,
           logger,
         });
@@ -51,7 +52,7 @@ class MercadoLibreScraper {
   async scrapeProduct(driver, product) {
     const startedAt = Date.now();
     logger.info("=".repeat(70));
-    logger.info(`[MercadoLibreScraper] Producto: "${product}"`);
+    logger.info(`[MercadoLibreScraper] Producto: "${product}"`, { producto: product });
 
     const home = new HomePage(driver, this.config.explicitWait);
     const filters = new FiltersPage(driver, this.config.explicitWait);
@@ -67,7 +68,7 @@ class MercadoLibreScraper {
       orden: false,
     };
     if (this.config.applyFilters) {
-      filtersApplied = await filters.applyAllFilters();
+      filtersApplied = await filters.applyAllFilters(product);
       await results.waitForResults();
     }
 
@@ -83,6 +84,7 @@ class MercadoLibreScraper {
     const executionMs = Date.now() - startedAt;
     logger.info(
       `[MercadoLibreScraper] "${product}" listo: ${products.length} resultados en ${executionMs}ms`,
+      { producto: product }
     );
 
     return {
@@ -102,6 +104,7 @@ class MercadoLibreScraper {
       const directUrl = `https://listado.mercadolibre.com.ar/${encodeURIComponent(product.trim().replace(/\s+/g, "-"))}`;
       logger.warn(
         `[MercadoLibreScraper] Búsqueda inicial sin resultados (${error.message}). Fallback: ${directUrl}`,
+        { producto: product }
       );
       await driver.get(directUrl);
       await resultsPage.waitForResults();

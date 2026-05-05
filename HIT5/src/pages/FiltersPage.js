@@ -12,30 +12,33 @@ class FiltersPage {
     this.explicitWait = explicitWait;
   }
 
-  async applyAllFilters() {
+  async applyAllFilters(producto) {
     const applied = {
-      condicion: await this.applyConditionNuevo(),
-      tiendaOficial: await this.applyOfficialStore(),
-      orden: await this.applySortMasRelevantes(),
+      condicion: await this.applyConditionNuevo(producto),
+      tiendaOficial: await this.applyOfficialStore(producto),
+      orden: await this.applySortMasRelevantes(producto),
     };
-    logger.info(`[FiltersPage] Filtros aplicados: ${JSON.stringify(applied)}`);
+    logger.info(`[FiltersPage] Filtros aplicados: ${JSON.stringify(applied)}`, { producto });
     return applied;
   }
 
-  async applyConditionNuevo() {
-    return this._safeApply("Condición Nuevo", async () => {
+  async applyConditionNuevo(producto) {
+    return this._safeApply("Condición Nuevo", producto, async () => {
       const link = await this._findFirst([
         By.css('aside a.ui-search-link[href*="/nuevo/"]'),
         By.css('aside a[href*="/nuevo/"]'),
         By.xpath('//aside//a[normalize-space()="Nuevo"]'),
       ]);
-      if (!link) return false;
+      if (!link) {
+        logger.warn(`[FiltersPage] Filtro Condición Nuevo no disponible`, { producto });
+        return false;
+      }
       return this._clickAndWait(link);
     });
   }
 
-  async applyOfficialStore() {
-    return this._safeApply("Solo tiendas oficiales", async () => {
+  async applyOfficialStore(producto) {
+    return this._safeApply("Solo tiendas oficiales", producto, async () => {
       const link = await this._findFirst([
         By.css('aside a.ui-search-link[href*="_Tienda_"]'),
         By.css('aside a[href*="_Tienda_"]'),
@@ -43,13 +46,16 @@ class FiltersPage {
           '//aside//a[contains(translate(normalize-space(), "TIENDAS OFICIALES", "tiendas oficiales"), "tiendas oficiales")]',
         ),
       ]);
-      if (!link) return false;
+      if (!link) {
+        logger.warn(`[FiltersPage] Filtro tienda_oficial no disponible`, { producto });
+        return false;
+      }
       return this._clickAndWait(link);
     });
   }
 
-  async applySortMasRelevantes() {
-    return this._safeApply("Orden Más relevantes", async () => {
+  async applySortMasRelevantes(producto) {
+    return this._safeApply("Orden Más relevantes", producto, async () => {
       const currentText = await this.driver.findElements(
         By.xpath(
           '//*[contains(normalize-space(),"Más relevantes") or contains(normalize-space(),"Mas relevantes")]',
@@ -59,14 +65,14 @@ class FiltersPage {
     });
   }
 
-  async _safeApply(label, fn) {
+  async _safeApply(label, producto, fn) {
     try {
-      logger.info(`[FiltersPage] Aplicando ${label}`);
+      logger.info(`[FiltersPage] Aplicando ${label}`, { producto });
       const applied = await fn();
-      if (!applied) logger.warn(`[FiltersPage] No se pudo aplicar ${label}`);
+      if (!applied) logger.warn(`[FiltersPage] No se pudo aplicar ${label}`, { producto });
       return Boolean(applied);
     } catch (error) {
-      logger.warn(`[FiltersPage] ${label} falló: ${error.message}`);
+      logger.warn(`[FiltersPage] ${label} falló: ${error.message}`, { producto });
       return false;
     }
   }
