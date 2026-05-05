@@ -57,6 +57,14 @@ ok "Namespace $NAMESPACE listo"
 
 ###############################################################################
 # PASO 2 — Instalar ECK Operator vía Helm
+#
+# ⚠ IMPORTANTE — Arquitectura del ECK Operator:
+#   El chart elastic/eck-operator despliega el operator como StatefulSet,
+#   NO como Deployment. El nombre del StatefulSet es "elastic-operator".
+#   Usar "kubectl wait deployment/elastic-operator" es INCORRECTO y causa
+#   el error:  Error from server (NotFound): deployments.apps "elastic-operator"
+#
+#   Comando correcto: kubectl rollout status statefulset/elastic-operator
 ###############################################################################
 info "Configurando repo Helm elastic..."
 helm repo add elastic https://helm.elastic.co 2>/dev/null || true
@@ -70,10 +78,13 @@ helm upgrade --install eck-operator elastic/eck-operator \
   --values "$DIR/helm/eck-operator-values.yaml" \
   --wait --timeout 5m
 
-info "Esperando pod del ECK Operator en Running..."
-kubectl wait --for=condition=available \
-  --timeout="${WAIT_TIMEOUT}s" \
-  deployment/elastic-operator -n "$OPERATOR_NS"
+# ── Validar readiness del ECK Operator ──────────────────────────────────────
+# FIX: ECK operator es un StatefulSet, no un Deployment.
+# "kubectl rollout status" funciona tanto para StatefulSet como Deployment.
+info "Esperando StatefulSet del ECK Operator (elastic-operator) en Ready..."
+kubectl rollout status statefulset/elastic-operator \
+  -n "$OPERATOR_NS" \
+  --timeout="${WAIT_TIMEOUT}s"
 ok "ECK Operator v${ECK_VERSION} operativo"
 
 ###############################################################################
@@ -99,8 +110,9 @@ until kubectl get elasticsearch "$ES_NAME" -n "$NAMESPACE" \
   if (( SECONDS >= WAIT_TIMEOUT )); then
     fail "Timeout esperando Elasticsearch green tras ${WAIT_TIMEOUT}s"
   fi
-  echo -ne "\r  ⏳ Elasticsearch: $(kubectl get elasticsearch "$ES_NAME" -n "$NAMESPACE" \
-    -o jsonpath='{.status.health}' 2>/dev/null || echo 'pending')  (${SECONDS}s)"
+  ES_CURRENT=$(kubectl get elasticsearch "$ES_NAME" -n "$NAMESPACE" \
+    -o jsonpath='{.status.health}' 2>/dev/null || echo 'pending')
+  echo -ne "\r   Elasticsearch: ${ES_CURRENT}  (${SECONDS}s)  "
   sleep 10
 done
 echo ""
@@ -113,8 +125,9 @@ until kubectl get kibana "$KB_NAME" -n "$NAMESPACE" \
   if (( SECONDS >= WAIT_TIMEOUT )); then
     fail "Timeout esperando Kibana green tras ${WAIT_TIMEOUT}s"
   fi
-  echo -ne "\r  ⏳ Kibana: $(kubectl get kibana "$KB_NAME" -n "$NAMESPACE" \
-    -o jsonpath='{.status.health}' 2>/dev/null || echo 'pending')  (${SECONDS}s)"
+  KB_CURRENT=$(kubectl get kibana "$KB_NAME" -n "$NAMESPACE" \
+    -o jsonpath='{.status.health}' 2>/dev/null || echo 'pending')
+  echo -ne "\r   Kibana: ${KB_CURRENT}  (${SECONDS}s)  "
   sleep 10
 done
 echo ""
@@ -123,34 +136,53 @@ ok "Kibana reporta health=green"
 # Verificar que Kibana responda HTTP 200 (port-forward temporal)
 info "Verificando HTTP 200 en Kibana via port-forward..."
 KB_POD=$(kubectl get pods -n "$NAMESPACE" -l kibana.k8s.elastic.co/name="$KB_NAME" \
+  --field-selector=status.phase=Running \
   -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward -n "$NAMESPACE" "pod/$KB_POD" 5601:5601 &>/dev/null &
-PF_PID=$!
-# Dar tiempo al port-forward de establecerse
-sleep 5
 
-SECONDS=0
-until curl -sk -o /dev/null -w '%{http_code}' \
-      "https://localhost:5601/api/status" 2>/dev/null | grep -q "200"; do
-  if (( SECONDS >= 120 )); then
-    kill "$PF_PID" 2>/dev/null || true
-    warn "No se pudo verificar HTTP 200 de Kibana (no crítico, continuando)"
-    break
-  fi
+if [[ -z "$KB_POD" ]]; then
+  warn "No se encontró pod de Kibana en Running. Saltando verificación HTTP."
+else
+  kubectl port-forward -n "$NAMESPACE" "pod/$KB_POD" 5601:5601 &>/dev/null &
+  PF_PID=$!
+  # Dar tiempo al port-forward de establecerse
   sleep 5
-done
 
-if curl -sk -o /dev/null -w '%{http_code}' \
-    "https://localhost:5601/api/status" 2>/dev/null | grep -q "200"; then
-  ok "Kibana responde HTTP 200"
+  SECONDS=0
+  KB_HTTP_OK=false
+  until curl -sk -o /dev/null -w '%{http_code}' \
+        "https://localhost:5601/api/status" 2>/dev/null | grep -q "200"; do
+    if (( SECONDS >= 120 )); then
+      kill "$PF_PID" 2>/dev/null || true
+      warn "No se pudo verificar HTTP 200 de Kibana (no crítico, continuando)"
+      KB_HTTP_OK=false
+      break
+    fi
+    sleep 5
+  done
+
+  if curl -sk -o /dev/null -w '%{http_code}' \
+      "https://localhost:5601/api/status" 2>/dev/null | grep -q "200"; then
+    KB_HTTP_OK=true
+    ok "Kibana responde HTTP 200"
+  fi
 fi
-
-# No matar port-forward aún — lo usamos para las API calls de post-install
-# Se cerrará al importar dashboard
 
 ###############################################################################
 # PASO 5 — Instalar Fluent Bit vía Helm
+#
+# La password de ES se extrae del Secret de ECK y se almacena en un Secret
+# separado que Fluent Bit monta como envFrom. Nunca se hardcodea.
 ###############################################################################
+info "Extrayendo password de Elasticsearch para Fluent Bit..."
+ES_PASSWORD="$(get_es_password)"
+
+info "Creando Secret 'fluent-bit-es-credentials' (idempotente)..."
+kubectl create secret generic fluent-bit-es-credentials \
+  --from-literal=ES_PASSWORD="${ES_PASSWORD}" \
+  --namespace "$NAMESPACE" \
+  --dry-run=client -o yaml | kubectl apply -f -
+ok "Secret fluent-bit-es-credentials sincronizado"
+
 info "Configurando repo Helm fluent..."
 helm repo add fluent https://fluent.github.io/helm-charts 2>/dev/null || true
 helm repo update >/dev/null
@@ -166,58 +198,71 @@ ok "Fluent Bit DaemonSet desplegado"
 ###############################################################################
 # PASO 6 — Configuración Post-Install vía API de Kibana
 ###############################################################################
-ES_PASSWORD="$(get_es_password)"
 
 # 6a. Aplicar ILM Policy directamente contra Elasticsearch
 info "Aplicando ILM Policy 'scraper-logs'..."
 ES_POD=$(kubectl get pods -n "$NAMESPACE" \
   -l elasticsearch.k8s.elastic.co/cluster-name="$ES_NAME" \
+  --field-selector=status.phase=Running \
   -o jsonpath='{.items[0].metadata.name}')
 
-# Copiar el archivo ILM al pod y aplicar via API interna
-kubectl cp "$DIR/manifests/ilm-policy.json" \
-  "$NAMESPACE/$ES_POD:/tmp/ilm-policy.json"
+if [[ -z "$ES_POD" ]]; then
+  warn "No se encontró pod de Elasticsearch en Running. Saltando ILM."
+else
+  # Copiar el archivo ILM al pod y aplicar via API interna
+  kubectl cp "$DIR/manifests/ilm-policy.json" \
+    "$NAMESPACE/$ES_POD:/tmp/ilm-policy.json"
 
-kubectl exec -n "$NAMESPACE" "$ES_POD" -- \
-  curl -sk -X PUT "https://localhost:9200/_ilm/policy/scraper-logs" \
+  ILM_HTTP=$(kubectl exec -n "$NAMESPACE" "$ES_POD" -- \
+    curl -sk -X PUT "https://localhost:9200/_ilm/policy/scraper-logs" \
+      -u "elastic:${ES_PASSWORD}" \
+      -H "Content-Type: application/json" \
+      -d @/tmp/ilm-policy.json \
+      -o /dev/null -w "%{http_code}")
+  [[ "$ILM_HTTP" == "200" ]] && ok "ILM Policy 'scraper-logs' aplicada (HTTP 200)" \
+    || warn "ILM Policy respondió HTTP ${ILM_HTTP} (verificar manualmente)"
+fi
+
+# 6b. Crear Data View (Index Pattern) scraper-* — solo si Kibana HTTP OK
+if [[ "${KB_HTTP_OK:-false}" == "true" ]]; then
+  info "Creando Data View 'scraper-*' en Kibana..."
+  DV_HTTP=$(curl -sk -X POST "https://localhost:5601/api/data_views/data_view" \
     -u "elastic:${ES_PASSWORD}" \
+    -H "kbn-xsrf: true" \
     -H "Content-Type: application/json" \
-    -d @/tmp/ilm-policy.json \
-    -o /dev/null -w "HTTP %{http_code}\n"
-ok "ILM Policy 'scraper-logs' aplicada"
+    -d '{
+      "data_view": {
+        "title": "scraper-*",
+        "timeFieldName": "@timestamp",
+        "name": "Scraper Logs"
+      },
+      "override": true
+    }' \
+    -o /dev/null -w "%{http_code}" 2>/dev/null || echo "000")
+  [[ "$DV_HTTP" == "200" ]] && ok "Data View 'scraper-*' configurado" \
+    || warn "Data View respondió HTTP ${DV_HTTP} (puede ya existir, no crítico)"
 
-# 6b. Crear Data View (Index Pattern) scraper-*
-info "Creando Data View 'scraper-*' en Kibana..."
-curl -sk -X POST "https://localhost:5601/api/data_views/data_view" \
-  -u "elastic:${ES_PASSWORD}" \
-  -H "kbn-xsrf: true" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data_view": {
-      "title": "scraper-*",
-      "timeFieldName": "@timestamp",
-      "name": "Scraper Logs"
-    },
-    "override": true
-  }' \
-  -o /dev/null -w "  HTTP %{http_code}\n" 2>/dev/null || \
-  warn "Data View podría ya existir (no crítico)"
-ok "Data View 'scraper-*' configurado"
+  # 6c. Importar Dashboard via Saved Objects API
+  if [[ -f "$DIR/dashboards/scraper-overview.ndjson" ]]; then
+    info "Importando Dashboard 'Scraper Overview'..."
+    DASH_HTTP=$(curl -sk -X POST \
+      "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
+      -u "elastic:${ES_PASSWORD}" \
+      -H "kbn-xsrf: true" \
+      -F "file=@$DIR/dashboards/scraper-overview.ndjson" \
+      -o /dev/null -w "%{http_code}" 2>/dev/null || echo "000")
+    [[ "$DASH_HTTP" == "200" ]] && ok "Dashboard 'Scraper Overview' importado" \
+      || warn "Dashboard respondió HTTP ${DASH_HTTP} (verificar manualmente)"
+  else
+    warn "No se encontró $DIR/dashboards/scraper-overview.ndjson — saltando import"
+  fi
 
-# 6c. Importar Dashboard via Saved Objects API
-info "Importando Dashboard 'Scraper Overview'..."
-curl -sk -X POST \
-  "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
-  -u "elastic:${ES_PASSWORD}" \
-  -H "kbn-xsrf: true" \
-  -F "file=@$DIR/dashboards/scraper-overview.ndjson" \
-  -o /dev/null -w "  HTTP %{http_code}\n" 2>/dev/null || \
-  warn "Import del dashboard podría requerir revisión manual"
-ok "Dashboard 'Scraper Overview' importado"
-
-# Cerrar port-forward
-kill "$PF_PID" 2>/dev/null || true
-wait "$PF_PID" 2>/dev/null || true
+  # Cerrar port-forward
+  kill "$PF_PID" 2>/dev/null || true
+  wait "$PF_PID" 2>/dev/null || true
+else
+  warn "Port-forward no disponible — Data View y Dashboard deberán importarse manualmente"
+fi
 
 ###############################################################################
 # PASO 7 — Resumen final
@@ -230,20 +275,23 @@ echo ""
 echo "  Componente           Estado"
 echo "  ─────────────────    ──────────────"
 
-# Check ECK Operator
-ECK_STATUS=$(kubectl get deployment elastic-operator -n "$OPERATOR_NS" \
-  -o jsonpath='{.status.availableReplicas}' 2>/dev/null || echo "0")
-[[ "$ECK_STATUS" -ge 1 ]] && ok "ECK Operator        Running" || warn "ECK Operator        Pending"
+# Check ECK Operator — es un StatefulSet, no un Deployment
+ECK_READY=$(kubectl get statefulset elastic-operator -n "$OPERATOR_NS" \
+  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+[[ "${ECK_READY:-0}" -ge 1 ]] && ok "ECK Operator        Running (${ECK_READY} ready)" \
+  || warn "ECK Operator        Pending"
 
 # Check Elasticsearch
 ES_HEALTH=$(kubectl get elasticsearch "$ES_NAME" -n "$NAMESPACE" \
   -o jsonpath='{.status.health}' 2>/dev/null || echo "unknown")
-[[ "$ES_HEALTH" == "green" ]] && ok "Elasticsearch       $ES_HEALTH" || warn "Elasticsearch       $ES_HEALTH"
+[[ "$ES_HEALTH" == "green" ]] && ok "Elasticsearch       $ES_HEALTH" \
+  || warn "Elasticsearch       $ES_HEALTH"
 
 # Check Kibana
 KB_HEALTH=$(kubectl get kibana "$KB_NAME" -n "$NAMESPACE" \
   -o jsonpath='{.status.health}' 2>/dev/null || echo "unknown")
-[[ "$KB_HEALTH" == "green" ]] && ok "Kibana              $KB_HEALTH" || warn "Kibana              $KB_HEALTH"
+[[ "$KB_HEALTH" == "green" ]] && ok "Kibana              $KB_HEALTH" \
+  || warn "Kibana              $KB_HEALTH"
 
 # Check Fluent Bit
 FB_DESIRED=$(kubectl get daemonset fluent-bit -n "$NAMESPACE" \
@@ -253,10 +301,6 @@ FB_READY=$(kubectl get daemonset fluent-bit -n "$NAMESPACE" \
 [[ "$FB_READY" == "$FB_DESIRED" && "$FB_READY" -ge 1 ]] \
   && ok "Fluent Bit          ${FB_READY}/${FB_DESIRED} pods Ready" \
   || warn "Fluent Bit          ${FB_READY}/${FB_DESIRED} pods Ready"
-
-ok "ILM Policy          'scraper-logs' aplicada"
-ok "Data View           'scraper-*' creado"
-ok "Dashboard           'Scraper Overview' importado"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

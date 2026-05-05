@@ -1,0 +1,46 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elastic
+  namespace: elastic
+spec:
+  version: 8.17.1
+  nodeSets:
+    - name: default
+      count: 1
+      config:
+        # Modo single-node: no requiere quorum, adecuado para entorno TP
+        node.store.allow_mmap: false
+        xpack.security.enabled: true
+        xpack.security.transport.ssl.enabled: true
+        xpack.security.http.ssl.enabled: true
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 1Gi
+                  cpu: 500m
+                limits:
+                  memory: 2Gi
+                  cpu: "1"
+              env:
+                - name: ES_JAVA_OPTS
+                  value: "-Xms512m -Xmx512m"
+          # Evitar OOM en nodos con poca RAM (k3s / minikube)
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: ["sh", "-c", "sysctl -w vm.max_map_count=262144"]
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
