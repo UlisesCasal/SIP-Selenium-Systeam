@@ -3,11 +3,31 @@
 
 const ScraperConfig = require("../config/ScraperConfig");
 const MercadoLibreScraper = require("./MercadoLibreScraper");
+const JsonWriter = require("../writers/JsonWriter");
+const mockData = require("../config/mockData");
 const logger = require("../utils/logger");
 
 async function scrape(config = ScraperConfig.fromEnv()) {
   const scraper = new MercadoLibreScraper(config);
   return scraper.run();
+}
+
+async function runMock(config) {
+  logger.info("Modo mock activo — omitiendo browser", { event: "mock_mode" });
+  const writer = new JsonWriter({ outputDir: config.outputDir, logger });
+  return config.products.map((product) => {
+    const products = mockData.getProducts(product, config.resultLimit);
+    const filePath = writer.write(product, products);
+    return {
+      query: product,
+      browser: config.browser,
+      headless: config.headless,
+      executionMs: 0,
+      filtersApplied: { condicion: false, tiendaOficial: false, orden: false },
+      products,
+      filePath,
+    };
+  });
 }
 
 async function main() {
@@ -27,7 +47,8 @@ async function main() {
       products: config.products,
     });
 
-    const summary = await scrape(config);
+    const useMock = process.env.USE_MOCK_DATA === "true";
+    const summary = useMock ? await runMock(config) : await scrape(config);
     if (summary && Array.isArray(summary)) {
       logger.info("Archivos generados", {
         event: "files_generated",

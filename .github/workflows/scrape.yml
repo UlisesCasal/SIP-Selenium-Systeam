@@ -30,6 +30,7 @@ jobs:
           docker run --rm \
             -e BROWSER=${{ matrix.browser }} \
             -e HEADLESS=true \
+            -e USE_MOCK_DATA=true \
             -v ${{ github.workspace }}/output:/app/output \
             -v ${{ github.workspace }}/screenshots:/app/screenshots \
             ml-scraper:ci
