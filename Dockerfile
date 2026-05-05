@@ -4,6 +4,8 @@ WORKDIR /app
 # System deps para compilar wheels si hace falta
 COPY HIT5/package*.json ./HIT5/
 RUN cd HIT5 && npm ci --ignore-scripts
+COPY HIT6/package*.json ./HIT6/
+RUN cd HIT6 && npm ci --ignore-scripts
 
 # ============ Stage 2: runtime (browsers + app) ============
 FROM node:24-trixie-slim AS runtime
@@ -27,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copiar deps de Node desde el builder
 COPY --from=builder --chown=node:node /app/HIT5/node_modules ./HIT5/node_modules
+COPY --from=builder --chown=node:node /app/HIT6/node_modules ./HIT6/node_modules
 
 # Copiar resto del código
 COPY --chown=node:node . .
