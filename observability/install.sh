@@ -35,6 +35,11 @@ helm upgrade --install promtail grafana/promtail \
   --values "$DIR/helm/promtail-values.yaml" \
   --wait --timeout 3m
 
+echo "→ Dashboard ConfigMap..."
+kubectl -n "$NAMESPACE" create configmap scraper-overview-dashboard \
+  --from-file="scraper-overview.json=$DIR/dashboards/scraper-overview.json" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 echo "→ Grafana..."
 helm upgrade --install grafana grafana/grafana \
   --version 8.5.0 \
@@ -42,9 +47,13 @@ helm upgrade --install grafana grafana/grafana \
   --values "$DIR/helm/grafana-values.yaml" \
   --wait --timeout 3m
 
+mkdir -p "$DIR/screenshots"
+
 echo ""
 echo "✓ Loki running"
 echo "✓ Promtail running"
 echo "✓ Grafana running"
 echo "✓ Datasource Loki configurado"
+echo "✓ Dashboard 'Scraper Overview' provisionado en carpeta 'SIP 2026'"
 echo "→ Abrir http://localhost:30000   (admin / \$GRAFANA_ADMIN_PASSWORD)"
+echo "→ Guardar screenshot en: observability/screenshots/hit5-dashboard.png"
