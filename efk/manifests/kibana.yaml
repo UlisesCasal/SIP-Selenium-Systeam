@@ -37,7 +37,13 @@ spec:
               memory: 1Gi
               cpu: "1"
           # Probes más tolerantes para clusters con recursos limitados (k3s/TP)
+          # IMPORTANTE: al sobrescribir readinessProbe se debe incluir el handler;
+          # ECK no puede fusionar su httpGet por defecto con una probe parcial.
           readinessProbe:
+            httpGet:
+              path: /login
+              port: 5601
+              scheme: HTTPS
             failureThreshold: 10
             initialDelaySeconds: 60
             periodSeconds: 15
