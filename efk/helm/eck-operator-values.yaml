@@ -1,32 +1,9 @@
-# ECK Operator Helm values — v2.16.x
-# Referencia: https://www.elastic.co/docs/deploy-manage/deploy/cloud-on-k8s/configure-eck
-#
-# El chart elastic/eck-operator despliega el operator como StatefulSet
-# (NO como Deployment). El nombre del StatefulSet es "elastic-operator".
+# El operator vigila todo el cluster pero corre en su propio namespace
+managedNamespaces: [elastic]
 
-# Habilitar la gestión de los CRDs desde el chart (instalación self-contained)
-manageCrds: true
-
-# Namespace donde el operator vigilará recursos. "\"\"" = todos los namespaces
-managedNamespaces: []
-
-# Recursos del pod del operator
 resources:
-  requests:
-    memory: 256Mi
-    cpu: 100m
-  limits:
-    memory: 512Mi
-    cpu: 500m
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { cpu: 100m, memory: 256Mi }
 
-# Logs en formato JSON para que Fluent Bit los parsee correctamente
-config:
-  logVerbosity: "0"
-
-# No usar webhook de validación por defecto (simplifica entorno TP sin cert-manager)
-webhook:
-  enabled: true
-
-# Telemetría deshabilitada en entorno TP/académico
-telemetry:
-  disabled: true
+# El operator NO es la pieza que necesita HA en este TP
+replicaCount: 1
