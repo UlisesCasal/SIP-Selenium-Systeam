@@ -1,46 +1,39 @@
 apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
 metadata:
-  name: elastic
+  name: scraper
   namespace: elastic
 spec:
-  version: 8.17.1
+  version: 8.17.3
+  # Para producción se usan al menos 3 nodos (master quorum). Para el TP, single-node
+  # es lo único que entra en RAM. ECK acepta un solo nodo si discovery.type=single-node.
   nodeSets:
     - name: default
       count: 1
       config:
-        # Modo single-node: no requiere quorum, adecuado para entorno TP
+        node.roles: ["master", "data", "ingest"]
+        # Sin esta línea, ES espera al menos 2 masters y queda en "yellow" para siempre.
         node.store.allow_mmap: false
-        xpack.security.enabled: true
-        xpack.security.transport.ssl.enabled: true
-        xpack.security.http.ssl.enabled: true
+        # En cluster local hay un solo nodo => single-shard, sin réplicas.
+        index.number_of_shards: 1
+        index.number_of_replicas: 0
       podTemplate:
         spec:
           containers:
             - name: elasticsearch
-              resources:
-                requests:
-                  memory: 1Gi
-                  cpu: 500m
-                limits:
-                  memory: 2Gi
-                  cpu: "1"
               env:
+                # Heap fijo: 1 GB (50% del limit de 2 GiB)
                 - name: ES_JAVA_OPTS
-                  value: "-Xms512m -Xmx512m"
-          # Evitar OOM en nodos con poca RAM (k3s / minikube)
-          initContainers:
-            - name: sysctl
-              securityContext:
-                privileged: true
-                runAsUser: 0
-              command: ["sh", "-c", "sysctl -w vm.max_map_count=262144"]
+                  value: "-Xms1g -Xmx1g"
+              resources:
+                requests: { cpu: 500m, memory: 1Gi }
+                limits: { cpu: 1000m, memory: 2Gi }
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
           spec:
-            accessModes:
-              - ReadWriteOnce
+            accessModes: [ReadWriteOnce]
+            storageClassName: local-path
             resources:
               requests:
-                storage: 5Gi
+                storage: 10Gi
