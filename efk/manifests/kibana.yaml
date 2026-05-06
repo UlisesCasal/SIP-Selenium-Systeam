@@ -1,50 +1,17 @@
 apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
-  name: kibana
+  name: scraper
   namespace: elastic
 spec:
-  version: 8.17.1
+  version: 8.17.3
   count: 1
   elasticsearchRef:
-    name: elastic
-  config:
-    telemetry.enabled: false
-    elasticsearch.requestTimeout: 90000
-
-    # server.publicBaseUrl — IMPORTANTE para Kibana 8.17+:
-    #
-    #  ❌ server.publicBaseUrl: ""   → CRASH (string vacío rechazado por Joi)
-    #  ✅ URL completa con esquema   → correcto
-    #  ✅ Campo completamente ausente → correcto (Kibana lo omite)
-    #
-    # Para NodePort 30001 (entorno TP con k3s/minikube):
-    #   Reemplazar con la IP real del nodo:
-    #   kubectl get nodes -o wide | awk 'NR>1{print $6}'
-    #
-    # ECK habilita TLS en Kibana por defecto → usar https://
-    server.publicBaseUrl: "https://localhost:30001"
-
+    name: scraper
   podTemplate:
     spec:
       containers:
         - name: kibana
           resources:
-            requests:
-              memory: 512Mi
-              cpu: 250m
-            limits:
-              memory: 1Gi
-              cpu: "1"
-          # Probes más tolerantes para clusters con recursos limitados (k3s/TP)
-          # IMPORTANTE: al sobrescribir readinessProbe se debe incluir el handler;
-          # ECK no puede fusionar su httpGet por defecto con una probe parcial.
-          readinessProbe:
-            httpGet:
-              path: /login
-              port: 5601
-              scheme: HTTPS
-            failureThreshold: 10
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 10
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { cpu: 500m, memory: 1Gi }

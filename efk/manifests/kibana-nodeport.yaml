@@ -1,21 +1,15 @@
-# NodePort externo para acceder a Kibana desde fuera del cluster
-# ECK ya crea un Service ClusterIP interno (kibana-kb-http).
-# Este Service adicional expone el mismo pod en el puerto 30001.
 apiVersion: v1
 kind: Service
 metadata:
   name: kibana-nodeport
   namespace: elastic
-  labels:
-    app: kibana-external
 spec:
   type: NodePort
   selector:
-    # El label que ECK pone en los pods de Kibana
-    kibana.k8s.elastic.co/name: kibana
+    common.k8s.elastic.co/type: kibana
+    kibana.k8s.elastic.co/name: scraper
   ports:
     - name: https
-      protocol: TCP
       port: 5601
       targetPort: 5601
       nodePort: 30001
