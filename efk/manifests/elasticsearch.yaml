@@ -1,0 +1,36 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: scraper
+  namespace: elastic
+spec:
+  version: 8.17.3
+  # Para producción se usan al menos 3 nodos (master quorum). Para el TP, single-node
+  # es lo único que entra en RAM. ECK acepta un solo nodo si discovery.type=single-node.
+  nodeSets:
+    - name: default
+      count: 1
+      config:
+        node.roles: ["master", "data", "ingest"]
+        # Sin esta línea, ES espera al menos 2 masters y queda en "yellow" para siempre.
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              env:
+                # Heap fijo: 1 GB (50% del limit de 2 GiB)
+                - name: ES_JAVA_OPTS
+                  value: "-Xms1g -Xmx1g"
+              resources:
+                requests: { cpu: 500m, memory: 1Gi }
+                limits: { cpu: 1000m, memory: 2Gi }
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: [ReadWriteOnce]
+            storageClassName: local-path
+            resources:
+              requests:
+                storage: 10Gi
