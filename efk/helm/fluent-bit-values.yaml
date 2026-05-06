@@ -121,14 +121,14 @@ config:
         Time_Format %Y-%m-%dT%H:%M:%S.%L%z
 
 # ── Volúmenes: acceso a los logs del nodo ─────────────────────────────────────
-volumeMounts:
+daemonSetVolumeMounts:
   - name: varlog
     mountPath: /var/log
   - name: varlibdockercontainers
     mountPath: /var/lib/docker/containers
     readOnly: true
 
-volumes:
+daemonSetVolumes:
   - name: varlog
     hostPath:
       path: /var/log
