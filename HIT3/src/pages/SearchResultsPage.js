@@ -1,28 +1,28 @@
-'use strict';
+"use strict";
 
-const { By, until } = require('selenium-webdriver');
-const fs = require('fs');
-const path = require('path');
-const logger = require('../utils/logger');
+const { By, until } = require("selenium-webdriver");
+const fs = require("fs");
+const path = require("path");
+const logger = require("../utils/logger");
 
 // Selectores multi-fallback (Polaris "poly-*" → versión anterior "ui-search-*")
 const ITEM_LOCATORS = [
-  By.css('li.ui-search-layout__item'),
-  By.css('.ui-search-results .ui-search-layout__item'),
-  By.css('.poly-card'),
+  By.css("li.ui-search-layout__item"),
+  By.css(".ui-search-results .ui-search-layout__item"),
+  By.css(".poly-card"),
 ];
 
 const TITLE_SELECTORS = [
-  '.poly-component__title',
-  '.ui-search-item__title',
-  'h2.poly-box',
-  '.ui-search-item__group__element h2',
+  ".poly-component__title",
+  ".ui-search-item__title",
+  "h2.poly-box",
+  ".ui-search-item__group__element h2",
 ];
 
 const PRICE_SELECTORS = [
-  '.poly-price__current .andes-money-amount__fraction',
-  '.andes-money-amount__fraction',
-  '.price-tag-fraction',
+  ".poly-price__current .andes-money-amount__fraction",
+  ".andes-money-amount__fraction",
+  ".price-tag-fraction",
 ];
 
 /**
@@ -34,29 +34,30 @@ class SearchResultsPage {
    * @param {import('selenium-webdriver').WebDriver} driver
    * @param {number} explicitWait — ms máximos para explicit waits
    */
-  constructor(driver, explicitWait = 20000) {
+  constructor(driver, explicitWait = 10000) {
     this.driver = driver;
     this.explicitWait = explicitWait;
     this._workingItemLocator = null; // se registra al encontrar items
   }
 
   async waitForResults() {
-    logger.info('Waiting for search results...');
+    logger.info("Waiting for search results...");
     let found = false;
 
-    for (const locator of ITEM_LOCATORS) {
-      try {
-        await this.driver.wait(until.elementLocated(locator), this.explicitWait);
-        this._workingItemLocator = locator;
-        found = true;
-        logger.info(`Items found with: ${locator.toString()}`);
-        break;
-      } catch {
-        // probar siguiente
+    await this.driver.wait(async () => {
+      for (const locator of ITEM_LOCATORS) {
+        const els = await this.driver.findElements(locator);
+        if (els.length > 0) {
+          this._workingItemLocator = locator;
+          found = true;
+          logger.info(`Items found with: ${locator.toString()}`);
+          return true;
+        }
       }
-    }
+      return false;
+    }, this.explicitWait).catch(() => {});
 
-    if (!found) throw new Error('No search results found on page');
+    if (!found) throw new Error("No search results found on page");
 
     // Explicit wait: al menos el primer item debe ser visible
     try {
@@ -66,7 +67,7 @@ class SearchResultsPage {
       // continuar si el wait de visibilidad falla (el item ya puede estar visible)
     }
 
-    logger.info('Results are visible');
+    logger.info("Results are visible");
   }
 
   /**
@@ -78,7 +79,7 @@ class SearchResultsPage {
     let items = await this.driver.findElements(locator);
 
     if (items.length === 0) {
-      logger.warn('0 items found — retrying with all locators');
+      logger.warn("0 items found — retrying with all locators");
       for (const loc of ITEM_LOCATORS) {
         items = await this.driver.findElements(loc);
         if (items.length > 0) break;
@@ -86,17 +87,26 @@ class SearchResultsPage {
     }
 
     if (items.length === 0) {
-      logger.warn('No product items found');
+      logger.warn("No product items found");
       return [];
     }
 
-    logger.info(`Extracting ${Math.min(limit, items.length)} of ${items.length} items`);
+    logger.info(
+      `Extracting ${Math.min(limit, items.length)} of ${items.length} items`,
+    );
     const products = [];
 
     for (let i = 0; i < Math.min(limit, items.length); i++) {
       try {
-        const { text: title, selector: titleSel } = await this._extractWithMeta(items[i], TITLE_SELECTORS);
-        const { text: priceRaw } = await this._extractWithMeta(items[i], PRICE_SELECTORS, true);
+        const { text: title, selector: titleSel } = await this._extractWithMeta(
+          items[i],
+          TITLE_SELECTORS,
+        );
+        const { text: priceRaw } = await this._extractWithMeta(
+          items[i],
+          PRICE_SELECTORS,
+          true,
+        );
         const url = await this._extractLink(items[i]);
 
         const product = {
@@ -108,7 +118,7 @@ class SearchResultsPage {
         };
 
         products.push(product);
-        logger.info(`[${i + 1}] ${title} | ${product.price ?? 'sin precio'}`);
+        logger.info(`[${i + 1}] ${title} | ${product.price ?? "sin precio"}`);
       } catch (err) {
         logger.error(`Error en producto ${i + 1}: ${err.message}`);
       }
@@ -118,13 +128,13 @@ class SearchResultsPage {
   }
 
   async takeScreenshot(name) {
-    const dir = path.join(__dirname, '../../screenshots');
+    const dir = path.join(__dirname, "../../screenshots");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
     const filePath = path.join(dir, `${name}-${ts}.png`);
     const data = await this.driver.takeScreenshot();
-    fs.writeFileSync(filePath, data, 'base64');
+    fs.writeFileSync(filePath, data, "base64");
     logger.info(`Screenshot: ${filePath}`);
     return filePath;
   }
@@ -141,14 +151,21 @@ class SearchResultsPage {
         // siguiente
       }
     }
-    if (!optional) throw new Error(`Text not found with: ${selectors.join(', ')}`);
+    if (!optional)
+      throw new Error(`Text not found with: ${selectors.join(", ")}`);
     return { text: null, selector: null };
   }
 
   async _extractLink(element) {
-    for (const sel of ['a.poly-component__title', 'a.ui-search-item__group__element', 'a']) {
+    for (const sel of [
+      "a.poly-component__title",
+      "a.ui-search-item__group__element",
+      "a",
+    ]) {
       try {
-        const href = await element.findElement(By.css(sel)).getAttribute('href');
+        const href = await element
+          .findElement(By.css(sel))
+          .getAttribute("href");
         if (href) return href;
       } catch {
         // siguiente

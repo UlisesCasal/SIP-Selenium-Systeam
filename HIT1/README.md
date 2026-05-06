@@ -8,7 +8,7 @@ Busca el producto **"bicicleta rodado 29"** en [mercadolibre.com.ar](https://www
 ## Requisitos previos
 
 | Herramienta | Versión mínima |
-|-------------|----------------|
+| ----------- | -------------- |
 | Node.js     | 18.x           |
 | npm         | 9.x            |
 | Chrome      | 112+           |
@@ -61,6 +61,7 @@ Primeros 5 productos — "bicicleta rodado 29"
 ```
 
 Además se generan:
+
 - `results/results-<browser>-<timestamp>.json` — datos estructurados
 - `results/report-<browser>-<timestamp>.html` — reporte visual
 - `screenshots/<browser>-<query>-<timestamp>.png` — captura de pantalla
@@ -83,6 +84,7 @@ BROWSER=firefox npm test
 ```
 
 Los tests validan:
+
 - Se extraen al menos **5 productos**
 - Cada producto cumple el **schema** `{ position, title, price, url }`
 - Las posiciones son consecutivas desde 1
@@ -124,9 +126,9 @@ MercadoLibre actualiza su frontend con frecuencia. En lugar de un único selecto
 
 ```js
 const TITLE_SELECTORS = [
-  '.poly-component__title',  // Polaris (versión más reciente)
-  '.ui-search-item__title',  // versión anterior
-  'h2.poly-box',             // fallback genérico
+  ".poly-component__title", // Polaris (versión más reciente)
+  ".ui-search-item__title", // versión anterior
+  "h2.poly-box", // fallback genérico
 ];
 ```
 
@@ -150,6 +152,7 @@ El `throttle()` entre búsquedas es **rate limiting** (respeto al servidor), **n
 ### Page Object Model
 
 Cada página del sitio tiene su propia clase con:
+
 - Locators encapsulados
 - Métodos de acción de alto nivel (`search()`, `getProducts()`)
 - Lógica de fallback interna
@@ -164,13 +167,13 @@ Si un producto no tiene precio visible (o el selector cambió), `price` se retor
 
 ## Comparación Chrome vs Firefox
 
-| Aspecto | Chrome | Firefox |
-|---------|--------|---------|
-| Headless API | `--headless=new` | `--headless` |
-| Tiempo promedio | ~8s | ~11s |
+| Aspecto              | Chrome                | Firefox               |
+| -------------------- | --------------------- | --------------------- |
+| Headless API         | `--headless=new`      | `--headless`          |
+| Tiempo promedio      | ~8s                   | ~11s                  |
 | Diferencias visuales | Ninguna significativa | Ninguna significativa |
-| Selectores | Idénticos | Idénticos |
-| Screenshots | PNG nativo | PNG nativo |
+| Selectores           | Idénticos             | Idénticos             |
+| Screenshots          | PNG nativo            | PNG nativo            |
 
 ---
 

@@ -14,13 +14,19 @@ class HomePage {
   }
 
   async open() {
-    logger.info(`[HomePage] Abriendo ${BASE_URL}`);
+    logger.info("[HomePage] Abriendo página", {
+      event: "page_open",
+      url: BASE_URL,
+    });
     await this.driver.get(BASE_URL);
     await this._waitForSearchInput();
   }
 
   async search(query) {
-    logger.info(`[HomePage] Buscando "${query}"`);
+    logger.info("[HomePage] Iniciando búsqueda", {
+      event: "search_start",
+      query: query,
+    });
     const input = await this._waitForSearchInput();
     await input.clear();
     await input.sendKeys(query, Key.ENTER);
@@ -34,18 +40,20 @@ class HomePage {
       throw new Error("BOT DETECTADO: Mercado Libre pide login.");
     }
 
-    const combinedSelector = MERCADOLIBRE.home.searchInput.map(loc => loc.value).join(', ');
+    const combinedSelector = MERCADOLIBRE.home.searchInput
+      .map((loc) => loc.value)
+      .join(", ");
 
     try {
       const element = await this.driver.wait(
         until.elementLocated(By.css(combinedSelector)),
-        timeout
+        timeout,
       );
-      
+
       await this.driver
         .wait(until.elementIsVisible(element), 3000)
         .catch(() => {});
-        
+
       return element;
     } catch (error) {
       throw new Error(`No se encontró el input de búsqueda tras ${timeout}ms.`);

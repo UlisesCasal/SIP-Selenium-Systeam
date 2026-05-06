@@ -1,0 +1,109 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: scraper-health
+    folder: SIP 2026
+    interval: 5m
+    rules:
+
+      # Condición 1 — Fallos consecutivos: ≥2 errores de scrape_failed en 10 minutos
+      - uid: scrape-consecutive-failures
+        title: "Scraper — Fallos Consecutivos (≥2 en 10min)"
+        condition: B
+        data:
+          - refId: A
+            datasourceUid: loki
+            queryType: range
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              expr: 'sum(count_over_time({namespace="ml-scraper", app="scraper"} | json | level="error" | event="scraper_failed" [10m]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: "-100"
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: "-100"
+              expression: A
+              refId: B
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        annotations:
+          summary: "El scraper falló ≥2 veces en los últimos 10 minutos"
+          description: "Revisar logs: kubectl logs -n ml-scraper -l app=scraper --tail=50"
+        labels:
+          severity: critical
+
+      # Condición 2 — Dato desactualizado: ningún scrape exitoso en 24h
+      - uid: scrape-stale-24h
+        title: "Scraper — Producto sin scrapear en 24h"
+        condition: B
+        data:
+          - refId: A
+            datasourceUid: loki
+            queryType: range
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            model:
+              expr: 'sum(count_over_time({namespace="ml-scraper", app="scraper"} | json | level="info" | message="Scrape completado" [24h]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: "-100"
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            model:
+              conditions:
+                - evaluator:
+                    params: [1]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [A]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: "-100"
+              expression: A
+              refId: B
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: "No se registró ningún scrape exitoso en las últimas 24h"
+          description: "Verificar CronJob: kubectl get cronjob -n ml-scraper"
+        labels:
+          severity: warning

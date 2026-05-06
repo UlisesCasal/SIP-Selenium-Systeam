@@ -1,29 +1,37 @@
 #!/usr/bin/env node
-'use strict';
+"use strict";
 
 /**
  * Navega a la página de resultados ya cargada y vuelca TODOS los links del sidebar.
  * Sirve para identificar los selectores reales de los filtros.
  */
 
-const BrowserFactory = require('../utils/BrowserFactory');
-const BrowserOptions = require('../utils/BrowserOptions');
-const { By, until } = require('selenium-webdriver');
+const BrowserFactory = require("../utils/BrowserFactory");
+const BrowserOptions = require("../utils/BrowserOptions");
+const { By, until } = require("selenium-webdriver");
 
 async function main() {
-  const opts = new BrowserOptions({ browser: 'chrome', headless: false });
+  const opts = new BrowserOptions({ browser: "chrome", headless: false });
   const driver = await BrowserFactory.create(opts);
 
   try {
     // Ir directo a la home y buscar
-    await driver.get('https://www.mercadolibre.com.ar');
-    const input = await driver.wait(until.elementLocated(By.css('input.nav-search-input')), 20000);
-    await input.sendKeys('bicicleta rodado 29');
-    await driver.findElement(By.css('button.nav-search-btn')).click();
-    await driver.wait(until.elementLocated(By.css('li.ui-search-layout__item')), 30000);
+    await driver.get("https://www.mercadolibre.com.ar");
+    const input = await driver.wait(
+      until.elementLocated(By.css("input.nav-search-input")),
+      20000,
+    );
+    await input.sendKeys("bicicleta rodado 29");
+    await driver.findElement(By.css("button.nav-search-btn")).click();
+    await driver.wait(
+      until.elementLocated(By.css("li.ui-search-layout__item")),
+      30000,
+    );
 
-    console.log('\n[DIAGNOSIS] Results page loaded. Waiting 2s for filters to render...');
-    await new Promise(r => setTimeout(r, 2000));
+    console.log(
+      "\n[DIAGNOSIS] Results page loaded. Waiting 2s for filters to render...",
+    );
+    await new Promise((r) => setTimeout(r, 2000));
 
     // Dump de TODOS los <a> en el sidebar via JS
     const data = await driver.executeScript(`
@@ -80,18 +88,17 @@ async function main() {
       };
     `);
 
-    console.log('\n=== SIDEBAR LINKS ===');
+    console.log("\n=== SIDEBAR LINKS ===");
     console.log(`Sidebar <aside> found: ${data.sidebarExists}`);
     console.log(`Filter group found: ${data.filterGroupExists}`);
     console.log(`Total links in sidebar: ${data.totalSidebarLinks}`);
-    console.log('\n--- Links ---');
+    console.log("\n--- Links ---");
     for (const l of data.links) {
       console.log(`TEXT: "${l.text}" | HREF: ${l.href}`);
       console.log(`  class="${l.classes}" parentClass="${l.parentClass}"`);
       if (l.keyword) console.log(`  ** matched keyword: ${l.keyword}`);
-      console.log('');
+      console.log("");
     }
-
   } finally {
     await driver.quit();
   }

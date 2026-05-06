@@ -1,17 +1,21 @@
 #!/usr/bin/env node
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
-const BrowserFactory = require('../utils/BrowserFactory');
-const HomePage = require('../pages/HomePage');
-const SearchResultsPage = require('../pages/SearchResultsPage');
-const logger = require('../utils/logger');
-const throttle = require('../utils/throttle');
-const { getFallbackProducts } = require('./fallback-data');
+const fs = require("fs");
+const path = require("path");
+const BrowserFactory = require("../utils/BrowserFactory");
+const HomePage = require("../pages/HomePage");
+const SearchResultsPage = require("../pages/SearchResultsPage");
+const logger = require("../utils/logger");
+const throttle = require("../utils/throttle");
+const { getFallbackProducts } = require("./fallback-data");
 
 // Productos objetivo del Hit #1
-const SEARCH_QUERIES = ['Bicicleta rodado 29', 'iPhone 16 Pro Max', 'GeForce RTX 5090'];
+const SEARCH_QUERIES = [
+  "Bicicleta rodado 29",
+  "iPhone 16 Pro Max",
+  "GeForce RTX 5090",
+];
 
 /**
  * Ejecuta el scraper para un browser dado.
@@ -20,12 +24,12 @@ const SEARCH_QUERIES = ['Bicicleta rodado 29', 'iPhone 16 Pro Max', 'GeForce RTX
  * @param {boolean} headless
  * @returns {Promise<Array>} Resultados extraídos
  */
-async function scrape(browserName = 'chrome', headless = false) {
+async function scrape(browserName = "chrome", headless = false) {
   const startTime = Date.now();
   const allResults = [];
 
   for (const query of SEARCH_QUERIES) {
-    logger.info(`${'─'.repeat(60)}`);
+    logger.info(`${"─".repeat(60)}`);
     logger.info(`Query: "${query}" | Browser: ${browserName}`);
 
     const result = await runQueryWithRetries(query, browserName, headless);
@@ -33,13 +37,13 @@ async function scrape(browserName = 'chrome', headless = false) {
 
     // Throttle entre búsquedas para no saturar el servidor
     if (SEARCH_QUERIES.indexOf(query) < SEARCH_QUERIES.length - 1) {
-      logger.info('Throttling 3s entre búsquedas...');
+      logger.info("Throttling 3s entre búsquedas...");
       await throttle(3000);
     }
   }
 
   const totalMs = Date.now() - startTime;
-  logger.info(`${'─'.repeat(60)}`);
+  logger.info(`${"─".repeat(60)}`);
   logger.info(`Scraping finalizado en ${totalMs}ms | Browser: ${browserName}`);
 
   return allResults;
@@ -62,11 +66,13 @@ async function runQueryWithRetries(query, browserName, headless) {
 
       const products = await resultsPage.getProducts(5);
       const screenshotPath = await resultsPage.takeScreenshot(
-        `${browserName}-${query.replace(/\s+/g, '_')}`
+        `${browserName}-${query.replace(/\s+/g, "_")}`,
       );
       const elapsed = Date.now() - queryStart;
 
-      logger.info(`Query "${query}" completada en ${elapsed}ms — ${products.length} productos`);
+      logger.info(
+        `Query "${query}" completada en ${elapsed}ms — ${products.length} productos`,
+      );
 
       return {
         query,
@@ -78,13 +84,13 @@ async function runQueryWithRetries(query, browserName, headless) {
         products,
       };
     } catch (err) {
-      const message = (err && err.message) || '';
+      const message = (err && err.message) || "";
       const retriable =
-        message.includes('account-verification') ||
-        message.includes('No se encontró ningún resultado');
+        message.includes("account-verification") ||
+        message.includes("No se encontró ningún resultado");
 
       logger.warn(
-        `Intento ${attempt}/${MAX_ATTEMPTS} fallido para "${query}": ${message}`
+        `Intento ${attempt}/${MAX_ATTEMPTS} fallido para "${query}": ${message}`,
       );
 
       if (!retriable) {
@@ -92,7 +98,7 @@ async function runQueryWithRetries(query, browserName, headless) {
       }
       if (attempt === MAX_ATTEMPTS) {
         logger.warn(
-          `Agotados los reintentos web para "${query}". Activando fallback API...`
+          `Agotados los reintentos web para "${query}". Activando fallback API...`,
         );
         const elapsed = Date.now() - queryStart;
         let products;
@@ -104,7 +110,7 @@ async function runQueryWithRetries(query, browserName, headless) {
           products = getFallbackProducts(query, 5);
           if (products.length === 0) {
             throw new Error(
-              `No hay datos cacheados para "${query}" — agregalo en fallback-data.js`
+              `No hay datos cacheados para "${query}" — agregalo en fallback-data.js`,
             );
           }
         }
@@ -134,13 +140,16 @@ async function fetchProductsFromApi(query, limit = 5) {
   const url = `https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(query)}&limit=${limit}`;
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-      'Accept': 'application/json',
-      'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+      Accept: "application/json",
+      "Accept-Language": "es-AR,es;q=0.9,en;q=0.8",
     },
   });
   if (!response.ok) {
-    throw new Error(`Fallback API devolvió ${response.status} para query "${query}"`);
+    throw new Error(
+      `Fallback API devolvió ${response.status} para query "${query}"`,
+    );
   }
 
   const data = await response.json();
@@ -156,7 +165,10 @@ async function fetchProductsFromApi(query, limit = 5) {
     products.push({
       position: products.length + 1,
       title: String(item.title).trim(),
-      price: item.price !== undefined && item.price !== null ? `$${item.price}` : null,
+      price:
+        item.price !== undefined && item.price !== null
+          ? `$${item.price}`
+          : null,
       url: item.permalink || null,
     });
 
@@ -175,18 +187,24 @@ async function fetchProductsFromApi(query, limit = 5) {
  * Guarda los resultados como JSON y genera un reporte HTML básico.
  */
 function saveResults(results, browserName) {
-  const resultsDir = path.join(__dirname, '../../results');
+  const resultsDir = path.join(__dirname, "../../results");
   if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const jsonPath = path.join(resultsDir, `results-${browserName}-${timestamp}.json`);
-  fs.writeFileSync(jsonPath, JSON.stringify(results, null, 2), 'utf-8');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const jsonPath = path.join(
+    resultsDir,
+    `results-${browserName}-${timestamp}.json`,
+  );
+  fs.writeFileSync(jsonPath, JSON.stringify(results, null, 2), "utf-8");
   logger.info(`Resultados guardados en: ${jsonPath}`);
 
   // Reporte HTML legible para GitHub Pages
-  const htmlPath = path.join(resultsDir, `report-${browserName}-${timestamp}.html`);
+  const htmlPath = path.join(
+    resultsDir,
+    `report-${browserName}-${timestamp}.html`,
+  );
   const html = generateHtmlReport(results, browserName);
-  fs.writeFileSync(htmlPath, html, 'utf-8');
+  fs.writeFileSync(htmlPath, html, "utf-8");
   logger.info(`Reporte HTML generado en: ${htmlPath}`);
 
   return { jsonPath, htmlPath };
@@ -201,10 +219,10 @@ function generateHtmlReport(results, browserName) {
         <td>${r.query}</td>
         <td>${p.position}</td>
         <td>${p.title}</td>
-        <td>${p.price ?? 'N/A'}</td>
+        <td>${p.price ?? "N/A"}</td>
         <td>${r.executionMs}ms</td>
-      </tr>`
-    )
+      </tr>`,
+    ),
   );
 
   return `<!DOCTYPE html>
@@ -230,7 +248,7 @@ function generateHtmlReport(results, browserName) {
         <th>Browser</th><th>Query</th><th>Pos.</th><th>Título</th><th>Precio</th><th>Tiempo</th>
       </tr>
     </thead>
-    <tbody>${rows.join('')}</tbody>
+    <tbody>${rows.join("")}</tbody>
   </table>
 </body>
 </html>`;
@@ -240,26 +258,27 @@ function generateHtmlReport(results, browserName) {
 // Entry point cuando se ejecuta directamente
 // ──────────────────────────────────────────────────────────
 async function main() {
-  const browserArg = process.env.BROWSER || process.argv[2] || 'chrome';
-  const headless = process.argv.includes('--headless') || process.env.HEADLESS === 'true';
+  const browserArg = process.env.BROWSER || process.argv[2] || "chrome";
+  const headless =
+    process.argv.includes("--headless") || process.env.HEADLESS === "true";
 
-  logger.info('='.repeat(60));
-  logger.info('MercadoLibre Scraper — HIT #1');
+  logger.info("=".repeat(60));
+  logger.info("MercadoLibre Scraper — HIT #1");
   logger.info(`Browser: ${browserArg} | Headless: ${headless}`);
-  logger.info('='.repeat(60));
+  logger.info("=".repeat(60));
 
   try {
     const results = await scrape(browserArg, headless);
     saveResults(results, browserArg);
 
     // Mostrar primeros 5 títulos en consola (requerimiento del hit)
-    console.log('\n' + '='.repeat(60));
+    console.log("\n" + "=".repeat(60));
     console.log(`Primeros 5 productos — "${results[0].query}"`);
-    console.log('='.repeat(60));
+    console.log("=".repeat(60));
     results[0].products.forEach((p) => {
       console.log(`  ${p.position}. ${p.title}`);
     });
-    console.log('='.repeat(60) + '\n');
+    console.log("=".repeat(60) + "\n");
   } catch (err) {
     logger.error(`Scraping fallido: ${err.message}`);
     logger.error(err.stack);
@@ -267,8 +286,17 @@ async function main() {
   }
 }
 
+/* istanbul ignore next */
 if (require.main === module) {
   main();
 }
 
-module.exports = { scrape };
+module.exports = {
+  SEARCH_QUERIES,
+  scrape,
+  runQueryWithRetries,
+  fetchProductsFromApi,
+  saveResults,
+  generateHtmlReport,
+  main,
+};

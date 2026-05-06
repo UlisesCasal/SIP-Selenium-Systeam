@@ -1,25 +1,32 @@
 # Prerrequisitos cumplidos
+
 A continuación, se presenta la evidencia técnica correspondiente a los cinco puntos requeridos para la validación de la entrega
 
 ### 1. Estado de los Nodos (`kubectl get nodes`)
+
 Al ejecutar el comando, se confirma que el nodo del cluster se encuentra en estado **Ready**.
 
-* **Evidencia:**
+- **Evidencia:**
+
 ```bash
 PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl get nodes
 NAME                      VERSION         STATUS     AGE           ROLES
 k3d-sobel-server-0     v1.31.5+k3s1       Ready      47m   control-plane, master
 ```
+
 ### 2. Despliegue de nginx-test (replicas: 2)
+
 Se desplegó exitosamente el servicio `nginx-test` con dos réplicas funcionales, verificando el acceso mediante `curl localhost:8080`.
 
-* **Evidencia:**  
+- **Evidencia:**
+
 ```bash
 PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl port-forward svc/nginx-test 8080:80
 Forwarding from 127.0.0.1:8080 -> 80
 Forwarding from [ :: 1]:8080 -> 80
 Handling connection for 8080
 ```
+
 ```bash
 PS C:\Users\Usuario> curl http://localhost:8080
 
@@ -50,10 +57,13 @@ RawContent: HTTP/1.1 200 OK
             Content-Length: 896
             Content-Type: text/html
 ```
+
 ### 3. Autoreparación del Deployment
+
 Se verificó la capacidad de recuperación del sistema eliminando un Pod manualmente y observando cómo el Deployment lo recrea de forma automática para mantener el estado deseado.
 
-* **Evidencia:**
+- **Evidencia:**
+
 ```bash
 PS C:\Users\Usuario\Documents\SD-Y-PP\Kubernetes> kubectl get pods -l app=nginx-test
 NAME                              READY          STATUS            RESTARTS          AGE
@@ -66,13 +76,16 @@ NAME                              READY          STATUS            RESTARTS     
 nginx-test-786f4f95d-c4qwf         1/1           Running              0              21s
 nginx-test-786f4f95d-zhp95         1/1           Running              0             5m51s
 ```
+
 ### 4. Importación de imágenes Docker
+
 Se domina el flujo de trabajo para importar imágenes locales al entorno de ejecución del cluster (`k3d image import` / `k3s ctr images import`).
 
-* **Evidencia:**
+- **Evidencia:**
+
 ```bash
 collazo@MacBook-Air-de-naiara mi-proyecto-k3d % docker build -t mi-imagen:latest .
-[[+] Building 23.1s (5/5) FINISHED                                                                                            docker:desktop-linux                                                                                           
+[[+] Building 23.1s (5/5) FINISHED                                                                                            docker:desktop-linux
 [ => [internal] load build definition from Dockerfile                                                                                0.0s
 [ => => transferring dockerfile: 55B                                                                                                 0.0s
 => [internal] load metadata for docker.io/library/nginx:alpine                                                                      20.0s
@@ -91,7 +104,7 @@ collazo@MacBook-Air-de-naiara mi-proyecto-k3d % docker build -t mi-imagen:latest
 => exporting to image                                                                                                                3.0s
 => => exporting layers                                                                                                               0.0s
 => => exporting manifest sha256:ccc264a062f0c22ab0b8966dc1bf6d48f86e09309ab3b07e65b38a2c5c600245                                     0.0s
-=> => exporting config sha256:97217db08391f947222f664f7624608a879033ceb8c727b229c8967a5697f7da                                       0.0s     
+=> => exporting config sha256:97217db08391f947222f664f7624608a879033ceb8c727b229c8967a5697f7da                                       0.0s
 => => exporting attestation manifest sha256:32d96ca770c0e3da68bd1048950ef940928a2934d9a55819e35af9ebcb80e154                         0.0s
 => => exporting manifest list sha256:0a4d133f1e7f118d9c556841cb2bee7ec932a431b0ce0795b0da832dd9fb8abd                                0.0s
 => => naming to docker.io/library/mi-imagen:latest                                                                                   0.0s
@@ -110,15 +123,103 @@ docker.io/library/mi-imagen:latest                                              
 image.index.v1+json                             sha256:0a4d133f1e7f118d9c556841cb2bee7ec932a431b0ce0795b0da832dd9fb8abd 24.6 MiB linux/arm64
                                                                                 io.cri-containerd.image=managed
 ```
+
 # Cómo correr Parte 1 + Parte 2 (Docker, k3s/k3d)
 
-# Comandos exactos para reproducir el demo del Hit #7
+### Parte 1: Docker
+
+1. **Construir la imagen localmente:**
+
+```bash
+docker build -t ml-scraper:latest .
+```
+
+2. **Ejecutar el contenedor (Prueba local):**
+
+```bash
+docker compose up scraper
+```
+
+### Parte 2: Kubernetes (k3s/k3d)
+
+1. **Cargar la imagen al cluster:**
+
+```bash
+k3d image import ml-scraper:latest -c scraper
+```
+
+2. **Aplicar los manifiestos (ConfigMap, PVC, Jobs):**
+
+```bash
+kubectl apply -f HIT7/k8s/
+```
+
+3. **Validar el estado de los recursos:**
+
+```bash
+kubectl get all,pvc
+```
+
+## Cómo ejecutar el proyecto: Demostración Hit #7
+
+### Prerrequisitos
+
+- [ ] Docker instalado.
+- [ ] kubectl instalado.
+- [ ] k3d instalado.
+- [ ] Un cluster llamado `scraper` en ejecución.
+
+### Parte 1: Construcción (Docker & k3d)
+
+Construye la imagen localmente:
+
+```bash
+docker build -t ml-scraper:latest .
+```
+
+Inyecta la imagen en el cluster local:
+
+```bash
+k3d image import ml-scraper:latest -c scraper
+```
+
+### Parte 2: Despliegue (Kubernetes)
+
+Aplica todos los manifiestos (ConfigMap, PVC, Job, CronJob):
+
+```bash
+kubectl apply -f HIT7/k8s/
+```
+
+_Nota: El Job de un solo uso (`scraper-once`) comenzará a ejecutarse inmediatamente._
+
+### Verificación y Comandos Útiles
+
+Ver que el pod se está ejecutando:
+
+```bash
+kubectl get pods -w
+```
+
+Comprobar que el volumen se creó exitosamente:
+
+```bash
+kubectl get pvc
+```
+
+Ver el Job completado y el CronJob activo:
+
+```bash
+kubectl get jobs
+kubectl get cronjobs
+```
 
 # Autoverificación
-- [] Tests + cobertura ≥ 70 %
-- [] Linter + formatter (los mismos que corren en pre-commit)
-- [] Detección de secrets
-- [] Manifests Kubernetes válidos
-- [] Build de la imagen Docker
-- [] E2E completo en cluster local
-- [] Verificar que los retries del Hit #5 efectivamente disparan
+
+- [x] Tests + cobertura ≥ 70 %
+- [x] Linter + formatter (los mismos que corren en pre-commit)
+- [x] Detección de secrets
+- [x] Manifests Kubernetes válidos
+- [x] Build de la imagen Docker
+- [x] E2E completo en cluster local
+- [x] Verificar que los retries del Hit #5 efectivamente disparan

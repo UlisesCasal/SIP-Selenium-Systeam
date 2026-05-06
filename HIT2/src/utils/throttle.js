@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Rate limiting entre requests — NO es sincronización de UI.

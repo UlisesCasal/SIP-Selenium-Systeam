@@ -4,6 +4,9 @@ coverage/
 *.log
 logs/
 results/
-screenshots/
+
 output/
 .DS_Store
+
+# Claude Code — configuración local (puede contener credenciales en permisos)
+.claude/settings.local.json

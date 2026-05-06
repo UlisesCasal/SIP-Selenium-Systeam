@@ -14,8 +14,11 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: scraper
-              image: ml-scraper:latest
+              securityContext:
+                runAsUser: 0
+              image: ml-scraper:v8
               imagePullPolicy: IfNotPresent
+              command: ["node", "HIT5/src/scrapers/mercadolibre.js"]
               envFrom:
                 - configMapRef:
                     name: scraper-config

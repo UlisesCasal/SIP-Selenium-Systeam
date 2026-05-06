@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const SUPPORTED_BROWSERS = ['chrome', 'firefox'];
+const SUPPORTED_BROWSERS = ["chrome", "firefox"];
 
 /**
  * Value object que encapsula toda la configuración de un WebDriver.
@@ -21,7 +21,7 @@ class BrowserOptions {
    * @param {number}             opts.explicitWait     ms — tiempo máximo para explicit waits
    */
   constructor({
-    browser = 'chrome',
+    browser = "chrome",
     headless = false,
     windowWidth = 1920,
     windowHeight = 1080,
@@ -51,15 +51,14 @@ class BrowserOptions {
    * @param {string} [defaultBrowser='chrome']
    * @returns {BrowserOptions}
    */
-  static fromCli(defaultBrowser = 'chrome') {
+  static fromCli(defaultBrowser = "chrome") {
     const browser =
       process.env.BROWSER ||
       process.argv.find((a) => SUPPORTED_BROWSERS.includes(a.toLowerCase())) ||
       defaultBrowser;
 
     const headless =
-      process.env.HEADLESS === 'true' ||
-      process.argv.includes('--headless');
+      process.env.HEADLESS === "true" || process.argv.includes("--headless");
 
     return new BrowserOptions({ browser, headless });
   }
@@ -72,11 +71,11 @@ class BrowserOptions {
   _validate() {
     if (!SUPPORTED_BROWSERS.includes(this.browser)) {
       throw new Error(
-        `Browser "${this.browser}" no soportado. Opciones válidas: ${SUPPORTED_BROWSERS.join(', ')}.`
+        `Browser "${this.browser}" no soportado. Opciones válidas: ${SUPPORTED_BROWSERS.join(", ")}.`,
       );
     }
     if (this.windowWidth < 1 || this.windowHeight < 1) {
-      throw new Error('windowWidth y windowHeight deben ser mayores a 0.');
+      throw new Error("windowWidth y windowHeight deben ser mayores a 0.");
     }
   }
 

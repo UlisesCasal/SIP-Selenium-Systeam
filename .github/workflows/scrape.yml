@@ -26,10 +26,13 @@ jobs:
 
       - name: Run scraper (headless ${{ matrix.browser }})
         run: |
+          mkdir -p ${{ github.workspace }}/screenshots && chmod 777 ${{ github.workspace }}/screenshots
           docker run --rm \
             -e BROWSER=${{ matrix.browser }} \
             -e HEADLESS=true \
+            -e USE_MOCK_DATA=true \
             -v ${{ github.workspace }}/output:/app/output \
+            -v ${{ github.workspace }}/screenshots:/app/screenshots \
             ml-scraper:ci
 
       - name: Run tests with coverage gate
@@ -37,9 +40,9 @@ jobs:
           mkdir -p ${{ github.workspace }}/coverage && chmod 777 ${{ github.workspace }}/coverage
           docker run --rm \
             --entrypoint npm \
-            --workdir /app/HIT1 \
+            --workdir /app/HIT6 \
             -e BROWSER=${{ matrix.browser }} \
-            -v ${{ github.workspace }}/coverage:/app/HIT1/coverage \
+            -v ${{ github.workspace }}/coverage:/app/HIT6/coverage \
             ml-scraper:ci \
             test -- --coverage
 

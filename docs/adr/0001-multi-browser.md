@@ -7,13 +7,14 @@
 ## Contexto
 
 El objetivo del sistema es extraer datos de MercadoLibre de manera automatizada y confiable. Al depender de un único navegador (por ejemplo, solo Chrome), el scraper queda expuesto a un punto único de fallo:
+
 - **Medidas Anti-Bot:** Plataformas grandes actualizan constantemente sus sistemas de detección (fingerprinting). Si un motor es bloqueado o detectado como headless, todo el sistema de extracción se detiene.
 - **Inconsistencias de renderizado:** Ocasionalmente, el DOM o los tiempos de carga de JavaScript pueden comportarse de manera ligeramente distinta dependiendo del motor (Blink en Chrome vs. Gecko en Firefox).
 - **Flexibilidad de despliegue:** Necesitamos que el código sea agnóstico al navegador subyacente para poder ejecutarlo en distintos entornos (locales o en integración continua) según los recursos disponibles.
 
 ## Decisión
 
-Decidimos soportar e implementar la ejecución de nuestros scripts tanto en **Google Chrome** como en **Mozilla Firefox** de forma simultánea, abstrayendo la creación de los WebDrivers a través de un patrón de diseño implementado en nuestro `BrowserFactory.js` y `BrowserOptions.js`. 
+Decidimos soportar e implementar la ejecución de nuestros scripts tanto en **Google Chrome** como en **Mozilla Firefox** de forma simultánea, abstrayendo la creación de los WebDrivers a través de un patrón de diseño implementado en nuestro `BrowserFactory.js` y `BrowserOptions.js`.
 
 En lugar de atar el código a una implementación específica de ChromeDriver, el scraper lee la configuración y puede instanciar cualquiera de los dos navegadores para realizar las pruebas y la recolección de datos.
 

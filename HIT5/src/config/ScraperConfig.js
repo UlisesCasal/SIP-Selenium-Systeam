@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const { parseProducts } = require('./products');
+const { parseProducts } = require("./products");
 
-const SUPPORTED_BROWSERS = ['chrome', 'firefox'];
+const SUPPORTED_BROWSERS = ["chrome", "firefox"];
 
 function envBool(name, fallback) {
   if (process.env[name] === undefined) return fallback;
-  return String(process.env[name]).toLowerCase() === 'true';
+  return String(process.env[name]).toLowerCase() === "true";
 }
 
 function envInt(name, fallback) {
@@ -16,19 +16,19 @@ function envInt(name, fallback) {
 
 class ScraperConfig {
   constructor({
-    browser = process.env.BROWSER || 'chrome',
-    headless = envBool('HEADLESS', false),
+    browser = process.env.BROWSER || "chrome",
+    headless = envBool("HEADLESS", false),
     products = parseProducts(),
-    resultLimit = envInt('RESULT_LIMIT', 10),
-    maxRetries = envInt('MAX_RETRIES', 3),
-    explicitWait = envInt('EXPLICIT_WAIT_MS', 20000),
-    pageLoadTimeout = envInt('PAGE_LOAD_TIMEOUT_MS', 120000),
-    scriptTimeout = envInt('SCRIPT_TIMEOUT_MS', 60000),
-    windowWidth = envInt('WINDOW_WIDTH', 1920),
-    windowHeight = envInt('WINDOW_HEIGHT', 1080),
-    outputDir = process.env.OUTPUT_DIR || 'output',
-    logDir = process.env.LOG_DIR || 'logs',
-    applyFilters = envBool('APPLY_FILTERS', true),
+    resultLimit = envInt("RESULT_LIMIT", 10),
+    maxRetries = envInt("MAX_RETRIES", 3),
+    explicitWait = envInt("EXPLICIT_WAIT_MS", 20000),
+    pageLoadTimeout = envInt("PAGE_LOAD_TIMEOUT_MS", 120000),
+    scriptTimeout = envInt("SCRIPT_TIMEOUT_MS", 60000),
+    windowWidth = envInt("WINDOW_WIDTH", 1920),
+    windowHeight = envInt("WINDOW_HEIGHT", 1080),
+    outputDir = process.env.OUTPUT_DIR || "output",
+    logDir = process.env.LOG_DIR || "logs",
+    applyFilters = envBool("APPLY_FILTERS", true),
   } = {}) {
     this.browser = browser.toLowerCase().trim();
     this.headless = Boolean(headless);
@@ -47,23 +47,29 @@ class ScraperConfig {
   }
 
   static fromEnv() {
-    const browserFromArg = process.argv.find((arg) => SUPPORTED_BROWSERS.includes(arg));
-    const headlessFromArg = process.argv.includes('--headless');
+    const browserFromArg = process.argv.find((arg) =>
+      SUPPORTED_BROWSERS.includes(arg),
+    );
+    const headlessFromArg = process.argv.includes("--headless");
     return new ScraperConfig({
-      browser: process.env.BROWSER || browserFromArg || 'chrome',
-      headless: envBool('HEADLESS', headlessFromArg),
+      browser: process.env.BROWSER || browserFromArg || "chrome",
+      headless: envBool("HEADLESS", headlessFromArg),
     });
   }
 
   _validate() {
     if (!SUPPORTED_BROWSERS.includes(this.browser)) {
-      throw new Error(`Browser no soportado: ${this.browser}. Use ${SUPPORTED_BROWSERS.join(', ')}.`);
+      throw new Error(
+        `Browser no soportado: ${this.browser}. Use ${SUPPORTED_BROWSERS.join(", ")}.`,
+      );
     }
     if (!Array.isArray(this.products) || this.products.length === 0) {
-      throw new Error('Debe configurarse al menos un producto.');
+      throw new Error("Debe configurarse al menos un producto.");
     }
-    if (this.resultLimit < 1) throw new Error('RESULT_LIMIT debe ser mayor a 0.');
-    if (this.maxRetries < 0) throw new Error('MAX_RETRIES no puede ser negativo.');
+    if (this.resultLimit < 1)
+      throw new Error("RESULT_LIMIT debe ser mayor a 0.");
+    if (this.maxRetries < 0)
+      throw new Error("MAX_RETRIES no puede ser negativo.");
   }
 
   toBrowserOptions() {
