@@ -1,59 +1,134 @@
 # 0009 — Evaluación de EFK como segundo stack de logging
 
 - Date: 2026-05-20
-- Status: Proposed (cierre formal en ADR 0010 de Parte 4)
+- Status: Proposed
 - Deciders: Equipo Systeam
 
 ## Contexto
 
-En Parte 1 adoptamos Loki + Promtail + Grafana (ADR 0007). En Parte 2 desplegamos EFK
-en paralelo con dos objetivos: (a) obtener datos comparativos reales sobre el mismo
-workload (scraper) y (b) entender los trade-offs antes de cerrar la decisión final
-en Parte 4 con OTel.
+En Parte 1 se adoptó Loki + Promtail + Grafana.
+En Parte 2 se despliega EFK en paralelo.
+Ambos stacks leen los mismos logs del namespace `ml-scraper`.
+El objetivo NO es reemplazar Loki todavía.
+El objetivo es comparar:
 
-Restricciones medidas:
+- footprint,
+- latencia,
+- ergonomía,
+- capacidades de búsqueda,
+- complejidad operativa,
+- licenciamiento.
 
-- Cluster k3s single-node, ~8 GB RAM totales (con Loki y EFK simultáneos: ~3.5 GB).
-- Mismos logs JSON del scraper (Hit #3 de Parte 1) van a los dos stacks.
-- Retención 7 días en ambos.
-- Licenciamiento: Loki es Apache 2.0; Elasticsearch es Elastic License v2 (source-available,
-  NO OSS según OSI). En contexto académico no afecta; en empresa puede ser bloqueante.
+## Restricciones
+
+- k3s single-node
+- ~8 GB RAM
+- Retención de 7 días
+- Logs JSON estructurados
+
+## Tabla de recursos
+
+| Componente    | Requests             | Limits               | Storage  |
+| ------------- | -------------------- | -------------------- | -------- |
+| ECK Operator  | 50m CPU / 128Mi RAM  | 100m CPU / 256Mi RAM | —        |
+| Elasticsearch | 500m CPU / 1Gi RAM   | 1000m CPU / 2Gi RAM  | 10Gi PVC |
+| Kibana        | 200m CPU / 512Mi RAM | 500m CPU / 1Gi RAM   | —        |
+| Fluent Bit    | 50m CPU / 64Mi RAM   | 200m CPU / 128Mi RAM | —        |
+
+Loki single-binary consumía ~256/512Mi.
+Elasticsearch consume ~4× más RAM.
+Ambos stacks simultáneos generan presión real de memoria.
+
+## Heap JVM
+
+Elasticsearch usa JVM.
+Por defecto toma ~50% RAM.
+Se configuró explícitamente:
+
+```yaml
+env:
+  - name: ES_JAVA_OPTS
+    value: "-Xms1g -Xmx1g"
+```
+
+Hacerlo explícito asegura que Elasticsearch asigne exactamente la cantidad de memoria especificada en su inicialización, evitando que intente expandir el heap durante picos de trabajo. Al bloquear la asignación de memoria (`Xms` igual a `Xmx`), se garantiza que quede memoria RAM disponible dentro del pod para el sistema operativo y las estructuras críticas fuera del heap, evitando que el OOMKiller de Kubernetes destruya el contenedor.
+
+## Licenciamiento
+
+Elasticsearch/Kibana usan Elastic License v2.
+NO es OSS según OSI.
+El cambio ocurrió post-2021, lo que originó el fork OpenSearch.
+Para uso académico está permitido.
+En un entorno corporativo, las implicancias empresariales limitan estrictamente la capacidad de ofrecer el motor como un servicio gestionado.
+Esto introduce un riesgo latente de vendor lock-in a nivel de arquitectura corporativa.
+
+## Alternativa OSS
+
+- OpenSearch
+- OpenSearch Dashboards
+- Apache 2.0
+- fork mantenido por AWS
+
+## Diferencia conceptual Loki vs Elasticsearch
+
+Loki trabaja con streams y labels.
+Elasticsearch trabaja con documentos indexados.
+Existe una profunda diferencia entre la velocidad de búsqueda y el costo de indexación derivado de las estructuras internas.
+
+```logql
+{level="ERROR"} |= "iphone"
+```
+
+```kql
+level: "ERROR" and producto: "iphone"
+```
+
+Ambas queries responden la misma pregunta pero usando modelos internos distintos.
 
 ## Decisión
 
-NO se decide reemplazar Loki por EFK ni viceversa en esta Parte 2. La decisión se difiere
-al ADR 0010 (Parte 4) cuando se haya evaluado también OTel.
+NO se adopta EFK como stack definitivo todavía.
+La decisión queda abierta hasta ADR 0010.
+Se decide mantener Loki y EFK en paralelo.
 
-Lo que sí se decide acá:
+## Tabla comparativa
 
-- Mantener los dos stacks corriendo en paralelo durante el TP.
-- Documentar las dimensiones de comparación (ver tabla en TP 2 · Parte 2).
-- Marcar EFK como "candidato fuerte" cuando el caso de uso requiera full-text search
-  pesado, y "candidato descartado" cuando el footprint o licencia importen.
+| Dimensión             | Loki                | EFK                  |
+| --------------------- | ------------------- | -------------------- |
+| Modelo                | Streams etiquetados | Documentos indexados |
+| Full-text search      | Limitado            | Muy fuerte           |
+| Footprint RAM         | Bajo                | Alto                 |
+| Complejidad operativa | Baja                | Media/Alta           |
+| Licencia              | Apache 2.0          | ELv2                 |
+| Queries               | LogQL               | KQL                  |
+| Escalabilidad         | Buena               | Muy buena            |
+| Costo de indexación   | Bajo                | Alto                 |
 
 ## Consecuencias
 
-- Se gana visibilidad real sobre los trade-offs (no opinión, datos del propio cluster).
-- Se gana experiencia con ECK Operator + ILM + KQL — útil aunque no se adopte EFK como
-  principal.
-- Se pierde RAM (~3.5 GB) durante el desarrollo. Mitigado bajando uno de los dos stacks
-  durante coding y subiendo ambos para evaluación.
-- Riesgo: introducir dependencia de Elastic License v2 en el repo. Mitigado: sólo se
-  usan imágenes oficiales, no se redistribuye Elasticsearch ni se ofrece como servicio.
+### Positivas
 
-## Métricas medidas (en NUESTRO cluster)
+- Obtención de métricas comparativas empíricas en igualdad de condiciones.
+- Evaluación directa de las capacidades analíticas que ofrecen Kibana y KQL.
 
-- RAM Loki stack: `<medir>` Mi
-- RAM EFK stack: `<medir>` Mi (ratio: `<calcular>`×)
-- Latency Q1 (errores por producto 24h):
-  - Loki: `<medir>` ms
-  - EFK: `<medir>` ms
-- Latency full-text "encontrar substring de 50 chars" en 7 días de logs:
-  - Loki: `<medir>` seg
-  - EFK: `<medir>` ms
+### Negativas
+
+- Aumento sustancial en el consumo global de memoria RAM del entorno.
+- Duplicación del esfuerzo y la carga operativa al gestionar dos sistemas paralelos.
+
+## Riesgos
+
+Existe una alta posibilidad de sobrecarga de cluster debido al gran consumo de recursos en un entorno single-node sin réplicas. Como mitigaciones, se aplican límites de recursos estrictos en los contenedores para evitar la caída total del sistema.
+
+## Métricas medidas
+
+- footprint RAM: `<medir>`
+- latencia Q1: `<medir>`
+- full-text search: `<medir>` (Loki) vs `<medir>` (EFK), con un ratio de `<calcular>`×.
 
 ## Referencias
 
-- Tabla comparativa de la cátedra: TP 2 · Parte 2 / Material de apoyo
-- Elastic License v2: https://www.elastic.co/licensing/elastic-license
-- OpenSearch (alternativa OSS): https://opensearch.org/
+- Elastic License
+- OpenSearch
+- KQL docs
+- Material TP2 Parte 2
