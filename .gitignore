@@ -7,3 +7,6 @@ results/
 
 output/
 .DS_Store
+
+# Claude Code — configuración local (puede contener credenciales en permisos)
+.claude/settings.local.json
