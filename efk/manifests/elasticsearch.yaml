@@ -14,9 +14,6 @@ spec:
         node.roles: ["master", "data", "ingest"]
         # Sin esta línea, ES espera al menos 2 masters y queda en "yellow" para siempre.
         node.store.allow_mmap: false
-        # En cluster local hay un solo nodo => single-shard, sin réplicas.
-        index.number_of_shards: 1
-        index.number_of_replicas: 0
       podTemplate:
         spec:
           containers:
