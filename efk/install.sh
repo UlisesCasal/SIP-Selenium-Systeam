@@ -30,3 +30,17 @@ kubectl apply -f efk/manifests/kibana.yaml
 kubectl apply -f efk/manifests/kibana-nodeport.yaml
 
 kubectl -n elastic rollout status deployment/scraper-kb --timeout=180s
+
+helm repo add fluent https://fluent.github.io/helm-charts
+helm repo update
+
+helm install fluent-bit fluent/fluent-bit \
+  --version 0.48.5 \
+  --namespace elastic \
+  --values efk/helm/fluent-bit-values.yaml
+
+kubectl -n elastic rollout status ds/fluent-bit --timeout=120s
+
+kubectl -n ml-scraper create job --from=cronjob/scraper-hourly scraper-efk-test-1
+kubectl -n ml-scraper wait --for=condition=complete job/scraper-efk-test-1 --timeout=600s
+
