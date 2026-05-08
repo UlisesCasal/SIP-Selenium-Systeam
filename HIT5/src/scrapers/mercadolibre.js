@@ -1,5 +1,9 @@
-#!/usr/bin/env node
 "use strict";
+
+require('/app/otel/scraper-instrumentation/otel_setup');
+
+const { trace, context, SpanStatusCode } = require('@opentelemetry/api');
+const tracer = trace.getTracer('scraper-mercadolibre');
 
 const ScraperConfig = require("../config/ScraperConfig");
 const MercadoLibreScraper = require("./MercadoLibreScraper");
@@ -8,8 +12,23 @@ const mockData = require("../config/mockData");
 const logger = require("../utils/logger");
 
 async function scrape(config = ScraperConfig.fromEnv()) {
-  const scraper = new MercadoLibreScraper(config);
-  return scraper.run();
+  return tracer.startActiveSpan('scrape_producto', async (span) => {
+    try {
+      span.setAttribute('producto', config.products.join(', '));
+      
+      const scraper = new MercadoLibreScraper(config);
+      const results = await scraper.run();
+      
+      span.setAttribute('results.count', results ? results.length : 0);
+      return results;
+    } catch (error) {
+      span.recordException(error);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+      throw error;
+    } finally {
+      span.end(); 
+    }
+  });
 }
 
 async function runMock(config) {
@@ -49,6 +68,7 @@ async function main() {
 
     const useMock = process.env.USE_MOCK_DATA === "true";
     const summary = useMock ? await runMock(config) : await scrape(config);
+    
     if (summary && Array.isArray(summary)) {
       logger.info("Archivos generados", {
         event: "files_generated",
@@ -63,29 +83,31 @@ async function main() {
         results_count: summary.length,
         total_products: summary.reduce((acc, item) => acc + item.products.length, 0),
       });
-      logger.info("Scraping completado", {
-        event: "scraper_complete",
-        results_count: summary.length,
-        total_products: summary.reduce((acc, item) => acc + item.products.length, 0),
-      });
     } else {
       logger.warn("El scraper terminó pero no se generó un resumen válido.", {
         event: "no_summary",
       });
     }
+    
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
   } catch (error) {
     logger.error("Scraper falló", {
       event: "scraper_failed",
       error: error.message,
       stack: error.stack,
     });
+    await new Promise(resolve => setTimeout(resolve, 5000));
     process.exit(1);
   }
 }
 
-/* istanbul ignore next */
-if (require.main === module) {
-  main();
-}
+(async () => {
+  const span = tracer.startSpan('scraper.main');
+  await context.with(trace.setSpan(context.active(), span), async () => {
+    await main();
+  });
+  span.end();
+})();
 
 module.exports = { scrape, main };

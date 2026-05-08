@@ -15,6 +15,8 @@
     "validate": "node src/utils/validate-output.js"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.75.0",
     "selenium-webdriver": "^4.27.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"

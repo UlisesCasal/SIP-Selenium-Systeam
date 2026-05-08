@@ -20,7 +20,7 @@ function slugifyProduct(product) {
 function parseProducts(raw = process.env.PRODUCTS) {
   if (!raw) return [...DEFAULT_PRODUCTS];
   return raw
-    .split("|")
+    .split("\n")
     .map((value) => value.trim())
     .filter(Boolean);
 }

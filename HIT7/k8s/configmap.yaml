@@ -5,7 +5,7 @@ metadata:
 data:
   BROWSER: "chrome"
   HEADLESS: "true"
-  LOG_LEVEL: "INFO"
+  LOG_LEVEL: "info"
   PRODUCTS: |
     bicicleta rodado 29
     iPhone 16 Pro Max

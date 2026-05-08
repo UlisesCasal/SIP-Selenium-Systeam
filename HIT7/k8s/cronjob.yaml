@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: scraper-hourly
+  namespace: ml-scraper
 spec:
   schedule: "0 * * * *"
   successfulJobsHistoryLimit: 3
@@ -16,12 +17,23 @@ spec:
             - name: scraper
               securityContext:
                 runAsUser: 0
-              image: ml-scraper:v8
+              image: ml-scraper:otel-v24 
               imagePullPolicy: IfNotPresent
               command: ["node", "HIT5/src/scrapers/mercadolibre.js"]
+              env:
+                - name: NODE_IP
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: status.hostIP
+                - name: OTEL_SERVICE_NAME
+                  value: "scraper-mercadolibre"
+                - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                  value: "http://agent-collector.otel.svc.cluster.local:4317"
               envFrom:
                 - configMapRef:
                     name: scraper-config
+                - configMapRef:
+                    name: otel-collector-endpoint
               volumeMounts:
                 - name: output
                   mountPath: /app/output

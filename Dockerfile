@@ -2,8 +2,13 @@
 FROM node:24-trixie-slim AS builder
 WORKDIR /app
 # System deps para compilar wheels si hace falta
+# Instalar root package.json primero (contiene @opentelemetry/*)
+COPY package*.json ./
+RUN npm ci --ignore-scripts
+# HIT5 deps (scraper logic)
 COPY HIT5/package*.json ./HIT5/
 RUN cd HIT5 && npm ci --ignore-scripts
+# HIT6 deps (PostgreSQL + fallback)
 COPY HIT6/package*.json ./HIT6/
 RUN cd HIT6 && npm ci --ignore-scripts
 
@@ -28,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar deps de Node desde el builder
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/HIT5/node_modules ./HIT5/node_modules
 COPY --from=builder --chown=node:node /app/HIT6/node_modules ./HIT6/node_modules
 
