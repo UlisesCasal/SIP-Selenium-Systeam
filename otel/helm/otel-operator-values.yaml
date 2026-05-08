@@ -1,0 +1,14 @@
+manager:
+  collectorImage:
+    repository: "otel/opentelemetry-collector-contrib"
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 128Mi }
+  # El operator necesita ver pods en todos los namespaces (clusterwide)
+  #watchNamespace: ""
+admissionWebhooks:
+  certManager:
+    enabled: true   # usa cert-manager para los webhooks (recomendado en prod)
+# Instalá los CRDs (OpenTelemetryCollector + Instrumentation)
+crds:
+  create: true
