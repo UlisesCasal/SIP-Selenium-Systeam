@@ -223,3 +223,108 @@ kubectl get cronjobs
 - [x] Build de la imagen Docker
 - [x] E2E completo en cluster local
 - [x] Verificar que los retries del Hit #5 efectivamente disparan
+
+---
+
+## TP 2 · Parte 3 — OpenTelemetry Collector + SDK
+
+### Prerrequisitos
+
+- Partes 1 y 2 completadas: Loki + Grafana corriendo en `observability`, EFK corriendo en `elastic`
+- Cluster k3d con al menos 8 GB RAM libre
+
+### Instalación
+
+```bash
+cd otel
+chmod +x install.sh
+./install.sh
+```
+
+El script:
+1. Crea namespaces (`otel`, `otel-operator-system`)
+2. Instala cert-manager (dependencia del OTel Operator)
+3. Instala el OpenTelemetry Operator v0.74.0 via Helm
+4. Aplica RBAC (ServiceAccount + ClusterRole para k8sattributes)
+5. Copia el secret `elastic-credentials` al namespace `otel`
+6. Aplica el CRD `OpenTelemetryCollector` en modo DaemonSet con pipeline filelog+otlp → batch+k8sattributes+transform → otlphttp/loki+elasticsearch
+7. Instala Jaeger all-in-one para traces (bonus)
+8. Escala Promtail y Fluent Bit a 0
+
+### Verificación de fan-out
+
+```bash
+# Disparar un Job manual
+kubectl -n ml-scraper create job --from=cronjob/scraper-hourly verify-fanout
+
+# Ver logs en Grafana (Loki)
+# http://<node-ip>:30000 → Explore → {service="scraper"}
+
+# Ver mismo log_id en Kibana (Elasticsearch)
+# http://<node-ip>:30001 → Discover → scraper-logs-*
+
+# Ver traces en Jaeger (si aplica)
+# http://<node-ip>:30002 → service: scraper → Find Traces
+```
+
+### Estructura de archivos
+
+```
+otel/
+├── README.md                     # Documentación del stack OTel
+├── install.sh                    # Script de instalación idempotente
+├── helm/
+│   └── otel-operator-values.yaml # Values del chart OTel Operator
+├── manifests/
+│   ├── namespace.yaml            # Namespace otel
+│   ├── collector-agent.yaml      # CRD OpenTelemetryCollector (DaemonSet)
+│   ├── rbac.yaml                 # ServiceAccount + ClusterRole
+│   └── scraper-otlp-config.yaml  # ConfigMap con endpoint OTLP
+├── scraper-instrumentation/
+│   ├── otel_setup.py             # SDK OTel Python (LoggerProvider + TracerProvider)
+│   └── requirements-otel.txt     # Dependencias OTel pinneadas
+└── screenshots/
+    ├── hit2-debug-output.png     # Output debug exporter con atributos k8s
+    ├── hit3-fanout-loki.png      # Mismo log_id en Grafana
+    ├── hit3-fanout-elastic.png   # Mismo log_id en Kibana
+    ├── hit4-old-agents-down.png  # Promtail+FluentBit en 0, OTel activo
+    ├── hit5-otlp-trace.png       # Logs con trace_id populado
+    └── hit6-trace-jaeger.png     # Traza completa en Jaeger (bonus)
+```
+
+### Enlaces
+
+- [ADR 0010 — Instrumentación vendor-neutral](docs/adr/0010-instrumentacion-vendor-neutral.md)
+- [ADR 0012 — Stack final de observabilidad](docs/adr/0012-stack-de-observabilidad-final.md)
+- [Mediciones comparativas](docs/observability-final/measurements.md)
+
+---
+
+## TP 2 · Parte 4 — Cierre y ADR magisterial
+
+Entrega final que integra las 3 experiencias previas en un ADR comparativo con mediciones empíricas, matriz de decisión y reflexión sobre vendor lock-in.
+
+### Archivos
+
+| Archivo | Descripción |
+|---------|-------------|
+| [`docs/adr/0012-stack-de-observabilidad-final.md`](docs/adr/0012-stack-de-observabilidad-final.md) | ADR magisterial: stack final recomendado, 1940 palabras, 8 secciones |
+| [`docs/observability-final/measurements.md`](docs/observability-final/measurements.md) | 7 métricas × 3 stacks, comandos exactos, timestamps, estado del cluster |
+| [`docs/observability-final/decision-matrix.md`](docs/observability-final/decision-matrix.md) | 5 contextos × 5 stacks, cada celda con veredicto + razón + caveat |
+| [`docs/observability-final/vendor-lockin-essay.md`](docs/observability-final/vendor-lockin-essay.md) | Reflexión sobre vendor lock-in, 3 casos reales (Shopify, Discord, GitHub) |
+| [`docs/observability-final/screenshots/`](docs/observability-final/screenshots) | Capturas de métricas en terminal maximizada |
+
+### Stack final
+
+```
+OTel Collector (DaemonSet) → Loki + Grafana (logs)
+                           → Jaeger all-in-one (traces)
+                           → Elasticsearch (full-text search futuro)
+```
+
+### Enlaces
+
+- [ADR 0012 — Stack final](docs/adr/0012-stack-de-observabilidad-final.md)
+- [Mediciones](docs/observability-final/measurements.md)
+- [Matriz de decisión](docs/observability-final/decision-matrix.md)
+- [Vendor lock-in essay](docs/observability-final/vendor-lockin-essay.md)
