@@ -302,6 +302,8 @@ otel/
 
 ## TP 2 · Parte 4 — Cierre y ADR magisterial
 
+**Veredicto final:** Recomendamos **OTel Collector como pipeline único + Loki para logs + Grafana para visualización + Jaeger para trazas** para el escenario de startup OSS-only: 4 devs full-stack, presupuesto cloud < USD 200/mes, sin SRE ni equipo de plataforma.
+
 Entrega final que integra las 3 experiencias previas en un ADR comparativo con mediciones empíricas, matriz de decisión y reflexión sobre vendor lock-in.
 
 ### Archivos

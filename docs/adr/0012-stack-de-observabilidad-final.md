@@ -113,11 +113,12 @@ Los dashboards son JSON propietario. Cambiar de UI requiere redibujar.
 Mediciones completas en `docs/observability-final/measurements.md`. Esta tabla resume:
 
 | Métrica | Loki + Grafana | EFK | OTel + Jaeger |
-|---|---|---|---|
+|---|---|---|---|---|
 | RAM total (MiB) | 239 | 2.099 | 115 |
 | CPU total (mCPU) | 30 | 287 | 38 |
 | Disco usado (MiB) | 1,8 | 69 | 0 |
 | Query latency p50 (ms) | 19 | 56 | 52 |
+| Query latency p95 (ms) | 50 | 85 | 61 |
 | Deploy clean (s) | 244 | 121 | ~31 |
 
 1. **EFK consume 2.099 MiB RAM vs 239 MiB de Loki — 9× más.** En nuestra VM de $40/mes, eso es ~$30/mes extra solo para mantener ES vivo. El 10% de nuestro presupuesto cloud.

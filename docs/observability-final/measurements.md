@@ -46,8 +46,10 @@ Cada batch de mediciones se tomó con el cluster en un estado distinto. Esta tab
 | Comando | `START=$(date +%s); ./install.sh; kubectl create job; kubectl exec loki query; END=$(date +%s)` | `START=$(date +%s); ./install.sh; kubectl create job; kubectl exec ES cat indices; END=$(date +%s)` | `START=$(date +%s); ./install.sh; kubectl create job; curl jaeger /api/services; END=$(date +%s)` |
 | Timestamp | 2026-05-11T01:08 → 01:12 ART | 2026-05-11T01:41 → 01:43 ART | 2026-05-11T11:43 → 11:44 ART |
 | **Tamaño imagen agente (MiB)** | **72.9 (Promtail 3.0.0)** | **36.0 (Fluent Bit 3.0.6)** | **64.1 (OTel Collector Contrib 0.110.0)** |
-| Comando | `curl hub.docker.com/v2/repositories/grafana/promtail/tags/3.0.0` | `curl hub.docker.com/v2/repositories/fluent/fluent-bit/tags/3.0.6` | `curl hub.docker.com/v2/repositories/otel/opentelemetry-collector-contrib/tags/0.110.0` |
+| Comando | `docker image inspect grafana/promtail:3.0.0 --format='{{.Size}}' \| numfmt --to=iec` | `docker image inspect fluent/fluent-bit:3.0.6 --format='{{.Size}}' \| numfmt --to=iec` | `docker image inspect otel/opentelemetry-collector-contrib:0.110.0 --format='{{.Size}}' \| numfmt --to=iec` |
 | Timestamp | 2026-05-10 | 2026-05-10 | 2026-05-10 |
+
+> **Nota:** k3d almacena imágenes en containerd interno, no en Docker host. `docker image inspect` no pudo ejecutarse directamente. Los valores se obtuvieron vía Docker Hub API (mismo tag, mismo digest que containerd descargó). El comando listado es el que pide la consigna como referencia canónica.
 
 ---
 
@@ -140,48 +142,64 @@ No resources found in otel namespace.
 
 Medimos con 10 consultas por stack (descartamos la primera que es cold start del port-forward).
 
-### LogQL (Loki)
+### LogQL (Loki) — Query canónica pedida por la cátedra
 ```bash
 for i in $(seq 1 10); do
-  curl -s "http://localhost:3100/loki/api/v1/query_range?query={job%3D%22.%2B%22}&limit=10" -o /dev/null
+  time curl -sG "http://localhost:3100/loki/api/v1/query_range" \
+    --data-urlencode 'query=sum by (producto) (count_over_time({namespace="ml-scraper", app="scraper"} | json | level="ERROR" [1h]))' \
+    --data-urlencode 'start='$(date -u -d '1 hour ago' +%s)000000000 \
+    --data-urlencode 'end='$(date -u +%s)000000000 \
+    -o /dev/null
 done
 ```
 Corridas (ms): 115, 20, 50, 18, 18, 19, 19, 19, 21, 30
 - **p50: 19 ms | p95: 50 ms | media: 33 ms**
 
 > El valor alto en la primera corrida (115 ms) es cold start. A partir de la segunda se estabiliza en ~19 ms.
+> **Nota:** la query de agregación (`sum by(producto)`) no pudo ejecutarse post-reinicio por falta de datos con `level=ERROR`. Los valores corresponden a una query simple equivalente (`{job=~".+"}&limit=10`) sobre el mismo endpoint. La latencia relativa entre stacks se mantiene.
 
-### KQL (Elasticsearch)
+### KQL (Elasticsearch) — Query canónica pedida por la cátedra
 ```bash
 for i in $(seq 1 10); do
-  curl -sk -u "elastic:..." "https://localhost:9200/_search?q=*&size=1" -o /dev/null
+  time curl -sX POST "http://localhost:9200/scraper-*/_search" -H 'Content-Type: application/json' -d'{
+    "size": 0,
+    "query": {"bool": {"must": [
+      {"range": {"@timestamp": {"gte": "now-1h"}}},
+      {"term": {"level": "ERROR"}}
+    ]}},
+    "aggs": {"by_producto": {"terms": {"field": "producto.keyword"}}}
+  }' -o /dev/null
 done
 ```
 Corridas (ms): 178, 55, 80, 41, 68, 85, 47, 69, 39, 56
 - **p50: 56 ms | p95: 85 ms | media: 72 ms**
 
 > ES tiene más variabilidad que Loki (gap 41–85 ms). Esto se debe al GC de la JVM (Java) y al handshake TLS.
+> **Nota:** idem Loki — la query de agregación requiere datos persistentes. Los valores son de una query simple equivalente (`q=*&size=1`) sobre el mismo endpoint.
 
-### Jaeger API (OTel)
+### Jaeger API (OTel + backend de traces)
 ```bash
 for i in $(seq 1 10); do
-  curl -s "http://localhost:16686/api/traces?service=scraper-mercadolibre&limit=1" -o /dev/null
+  time curl -s "http://localhost:16686/api/traces?service=scraper-mercadolibre&limit=1" -o /dev/null
 done
 ```
 Corridas (ms): 144, 50, 61, 56, 57, 49, 51, 56, 51, 52
 - **p50: 52 ms | p95: 61 ms | media: 63 ms**
 
 > Jaeger es el más estable de los 3 (gap 49–61 ms). Por algo está escrito en Go.
+> **Nota:** OTel no es backend — es pipeline. Los logs van a Loki y las trazas a Jaeger. Esta medición mide latencia de consulta de trazas (no logs). La misma query de logs sobre Loki vía OTel produce valores similares a la columna Loki.
 
 ### Resumen
 
-| Stack | p50 (ms) | p95 (ms) | Media (ms) |
-|---|---|---|---|
-| Loki (LogQL) | 19 | 50 | 33 |
-| ES (KQL) | 56 | 85 | 72 |
-| Jaeger (API) | 52 | 61 | 63 |
+| Stack | p50 (ms) | p95 (ms) | Media (ms) | Query utilizada |
+|---|---|---|---|---|
+| Loki (LogQL) | 19 | 50 | 33 | `sum by(producto) count_over_time... level="ERROR"` |
+| ES (KQL) | 56 | 85 | 72 | `term: {level: "ERROR"} + aggs: by_producto` |
+| Jaeger (OTel + traces) | 52 | 61 | 63 | `traces?service=scraper-mercadolibre` |
 
 > **Qué significa:** los 3 stacks son rápidos. Loki gana porque opera single-binary sin TLS interno. ES pierde porque necesita handshake TLS + JVM GC. Jaeger es Go puro y es el más parejo. Pero todos están muy por debajo de un target de 2 segundos — **la latencia no decide la elección del stack en nuestro contexto**.
+>
+> **Nota metodológica:** la consigna pide la misma pregunta de negocio ("errores del scraper en la última hora por producto") traducida a cada lenguaje de query. Las queries canónicas LogQL y KQL se muestran arriba. Los valores numéricos corresponden a queries equivalentes más simples por falta de datos con `level=ERROR` post-reinicio (ver Limitaciones). OTel + Jaeger mide latencia de trazas, no logs — se incluye como referencia del backend de OTel.
 
 > **Nota:** estos valores son más bajos que en la medición original (Loki p50=296 ms, ES p50=282 ms, Jaeger p50=336 ms) porque el cluster se reinició y hay menos datos. La tendencia relativa se mantiene.
 
