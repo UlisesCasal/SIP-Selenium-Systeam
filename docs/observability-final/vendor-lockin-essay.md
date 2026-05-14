@@ -1,9 +1,5 @@
 # Hit #4 — Vendor Lock-in en Observabilidad: Cómo OTel Cambia el Cálculo
 
-> **Para la defensa oral:** Este essay muestra que entendemos el problema de vendor lock-in más allá de nuestro TP. La idea clave: OTel no elimina el lock-in, pero lo reduce de "cambio imposible" a "cambio configurable".
-
----
-
 ## 1. El problema histórico (~110 palabras)
 
 Antes de OpenTelemetry, instrumentar una aplicación era elegir un vendor y casarse con su SDK. Si arrancabas con Datadog (`dd-trace`) y querías pasarte a New Relic o Jaeger, tenías que re-escribir cada llamada de tracing — cada SDK tenía APIs, conceptos y context propagation distintos. Empresas que lo hicieron reportaron proyectos de 6 a 12 meses (CNCF End User Survey 2023). El lockín real no era el backend — era el SDK adentro de tu aplicación.
@@ -41,18 +37,3 @@ Citamos 2 casos públicos con enlaces verificables:
 ## 5. Cierre honesto (~110 palabras)
 
 OTel no elimina el lock-in. Lo redistribuye. El nuevo lock-in es triple: (a) a OTel mismo — si el proyecto se fragmenta, todos sufrimos; (b) al backend de almacenamiento — migrar terabytes de logs de Loki a ES sigue siendo caro aunque el pipeline sea OTel; (c) al conocimiento del equipo — si tu operación está en LogQL, pasarte a KQL requiere re-entrenamiento. Pero es un lock-in más barato de cambiar (YAML vs. re-instrumentación), con menor costo de salida, y distribuido entre más actores (CNCF multi-vendor). Eso no es nirvana — es progreso medible.
-
----
-
-## Referencias
-
-- OpenTelemetry CNCF Graduation Announcement (2024): https://www.cncf.io/announcements/2024/03/21/opentelemetry-reaches-graduation-milestone/
-- Shopify Engineering — OpenTelemetry at Shopify: https://shopify.engineering/opentelemetry-at-shopify
-- Discord Engineering — Scaling ELK to Trillions of Events: https://discord.com/blog/how-discord-scaled-elk-to-trillions-of-events
-- GitHub at KubeCon NA 2023 — OpenTelemetry at GitHub: https://www.youtube.com/watch?v=oBfV_8x7pU4
-- Elastic License Change (2021): https://www.elastic.co/blog/licensing-change
-- AWS OpenSearch fork announcement: https://aws.amazon.com/blogs/opensource/introducing-opensearch/
-- OTel Specification: https://opentelemetry.io/docs/specs/otel/
-- CNCF End User Survey 2023: https://www.cncf.io/reports/end-user-survey-2023/
-- Nuestras mediciones: `docs/observability-final/measurements.md`
-- Nuestro ADR final: `docs/adr/0012-stack-de-observabilidad-final.md`

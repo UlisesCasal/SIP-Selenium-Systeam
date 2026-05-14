@@ -7,14 +7,6 @@
 
 ---
 
-> **Para la defensa oral:** este ADR es la respuesta a "¿qué stack eligieron y por qué?".
-> Hay 3 ideas fuerza que tienen que quedar claras:
-> 1. **No hay stack perfecto** — cada contexto tiene su mejor opción.
-> 2. **Nosotros somos una startup chica** — priorizamos bajo consumo de recursos, deploy rápido, y no depender de un ingeniero de plataforma.
-> 3. **Elegimos OTel + Loki + Grafana + Jaeger** porque pesa poco, cuesta $0, y si el día de mañana cambia el contexto, podemos migrar sin re-escribir código.
-
----
-
 ## 1. Contexto
 ### ¿Quiénes somos y qué necesitamos?
 
@@ -27,10 +19,6 @@ Somos **4 desarrolladores full-stack** manteniendo un scraper de MercadoLibre co
 **Madurez operativa:** kubectl, Helm 3, GitHub Actions. Sin dashboards, sin alerting, sin tracing. Saben `kubectl logs`, pero con 50 pods rotando por hora los logs se pierden al reciclarse los pods — la terminal deja de ser útil para debugging.
 
 **Restricciones:** sin datos personales ni regulación aplicable (startup pre-seed, sin DPA). El CTO también codea y el budget cabe en una tarjeta corporativa. Cualquier gasto recurrente tiene que defenderse en 2 minutos.
-
-> **Para la defensa:** si te preguntan "¿por qué tanto contexto?", la respuesta es: porque el mejor stack no existe en abstracto. Un stack que es genial para Google es un desastre para 4 devs con $40/mes. Describir bien el contexto es lo que hace que nuestra decisión sea defendible.
->
-> **Y ojo:** este escenario no es Google ni MercadoLibre. Es una startup chica donde vos, developer, tenés que convencer a tu CTO de por qué gastar USD 30/mes extra en una VM más grande solo para que Elasticsearch entre. Si no podés defenderlo con números, perdiste el argumento. **Nuestro ADR se defiende con mediciones, no con opiniones.**
 
 ---
 
@@ -157,23 +145,3 @@ Definimos 3 horizontes con trigger, acción y riesgo.
 - **ADR 0007 (Loki + Promtail + Grafana):** lo reemplazamos. Loki+Grafana se mantienen como base, pero OTel Collector ahora es el agente en lugar de Promtail, y sumamos Jaeger para trazas.
 - **ADR 0009 (Evaluación de EFK):** lo actualizamos. EFK ya no es candidato a stack único — pasa a ser backend secundario para full-text search cuando el volumen lo justifique.
 - **ADR 0010 (Instrumentación OTel):** lo confirmamos. ADR 0010 explica por qué OTel unifica la recolección. Este ADR 0012 elige el backend final (Loki + Jaeger) sobre esa capa.
-
----
-
-## 8. Referencias
-
-- Mediciones: `docs/observability-final/measurements.md`
-- Matriz de decisión: `docs/observability-final/decision-matrix.md`
-- Vendor lock-in essay: `docs/observability-final/vendor-lockin-essay.md`
-- ADR 0004: `docs/adr/0004-estrategia-de-logs.md`
-- ADR 0007: `docs/adr/0007-stack-de-logging.md`
-- ADR 0009: `docs/adr/0009-stack-de-logging-efk.md`
-- ADR 0010: `docs/adr/0010-instrumentacion-vendor-neutral.md`
-- CNCF Observability Whitepaper: https://github.com/cncf/tag-observability/blob/main/whitepaper.md
-- Charity Majors et al., *Observability Engineering* (O'Reilly, 2022) — Cap. 3 y 7
-- Cindy Sridharan, *Distributed Systems Observability* (O'Reilly, 2018)
-- Ford, Richards, Sadalage, Dehghani, *Software Architecture: The Hard Parts* (O'Reilly, 2021) — Cap. 7
-- OpenTelemetry: https://opentelemetry.io/docs/
-- Loki Architecture: https://grafana.com/docs/loki/latest/get-started/architecture/
-- Elastic License v2: https://www.elastic.co/licensing/elastic-license
-- Grafana Tempo: https://grafana.com/oss/tempo/

@@ -78,21 +78,3 @@ Tres razones:
 3. **La industria se mueve.** Elastic ya no es Apache 2.0 (ELv2 desde 2021). Grafana Labs agregó OTLP nativo a Loki. Los vendors compiten en features, no en protocolo — porque OTLP vuelve el protocolo commodity. Estar del lado de OTLP hoy es apostar a que el lock-in de observabilidad sea cosa del pasado.
 
 ---
-
-## 5. Relación con ADRs previos
-
-- **ADR 0007 (Loki + Promtail + Grafana):** Este ADR 0010 no lo reemplaza — Loki sigue siendo el backend primario de logs. Lo que cambia es el agente de recolección (OTel Collector reemplaza a Promtail).
-- **ADR 0009 (Evaluación de EFK):** Este ADR 0010 tampoco lo reemplaza — EFK sigue siendo backend secundario para full-text search. El cambio está en que ahora Fluent Bit es reemplazado por el mismo OTel Collector que exporta a Elasticsearch.
-- **ADR 0012 (Stack final):** Este ADR 0010 es la justificación técnica de la capa de instrumentación. El ADR 0012 integra esta decisión con la selección del backend final.
-
----
-
-## 6. Referencias
-
-- OpenTelemetry CNCF graduation: https://www.cncf.io/announcements/2023/11/06/cloud-native-computing-foundation-announces-opentelemetry-graduation/
-- OTLP spec: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/otlp.md
-- Loki OTLP ingestion (≥ 3.0): https://grafana.com/docs/loki/latest/send-data/otel/
-- Elasticsearch OTLP support: https://www.elastic.co/observability-labs/blog/opentelemetry-elastic-observability
-- Mediciones del TP: `docs/observability-final/measurements.md`
-- ADR 0012 (stack final): `docs/adr/0012-stack-de-observabilidad-final.md`
-- OpenTelemetry Python SDK: https://opentelemetry-python.readthedocs.io/en/stable/

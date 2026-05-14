@@ -16,6 +16,7 @@ Este directorio contiene los entregables de la Parte 4 del TP 2: Cierre y ADR ma
 | Archivo | Descripción |
 |---------|-------------|
 | [`docs/adr/0010-instrumentacion-vendor-neutral.md`](../adr/0010-instrumentacion-vendor-neutral.md) | ADR: Adopción de OTel como capa de instrumentación vendor-neutral |
+| [`docs/adr/0011-traces-vs-solo-logs.md`](../adr/0011-traces-vs-solo-logs.md) | ADR: Justificación de tracing además de logs en scraper batch |
 | [`docs/adr/0012-stack-de-observabilidad-final.md`](../adr/0012-stack-de-observabilidad-final.md) | ADR magisterial: Stack final OTel + Loki + Grafana + Jaeger |
 
 ## Stacks evaluados

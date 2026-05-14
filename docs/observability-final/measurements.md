@@ -210,7 +210,7 @@ Corridas (ms): 144, 50, 61, 56, 57, 49, 51, 56, 51, 52
 
 Medido el **2026-05-11** sobre `k3d-sobel`. Borramos los namespaces de cada stack, medimos con `date +%s` desde el `kubectl delete` hasta que el scraper job genera datos visibles en el visualizador.
 
-### Comandos exactos (los que pidió el profesor)
+### Comandos exactos
 
 ```bash
 # 1. Limpieza inicial
@@ -254,14 +254,6 @@ echo "OTel+Jaeger stack deploy: $((END-START))s"
 | **Loki + Grafana** | 01:08:25 | 01:12:29 | **~244 s** | Grafana (~120 s su init container descargando plugins) |
 | **EFK** | 01:41:56 | 01:43:57 | **~121 s** | Esperar que ES ponga verde (~87 s) |
 | **OTel + Jaeger** | 11:43:59 | 11:44:30 | **~111 s*** | cert-manager (~80 s CRDs + webhook). Sin él: ~31 s |
-
-### Bugs que encontramos y cómo los arreglamos
-
-**Loki:** Grafana entraba en CrashLoopBackOff porque el contacto de Discord requería un webhook válido y nosotros pusimos URL vacía. **Fix:** vaciamos `contact-point.yaml` (`contactPoints: []`) y cambiamos `notification-policy.yaml` a `receiver: grafana-default-email`.
-
-**EFK:** Fluent Bit chart v0.48.5 no renderiza la sección `customParsers`. El parser `json_scraper` no existía → CrashLoopBackOff. Además el filtro grep buscaba `app=scraper` pero los jobs creados por cronjob no heredan esa label. **Fix:** sacamos el parser, usamos `Merge_Log On` del filter kubernetes, y cambiamos grep a `namespace_name=ml-scraper`.
-
-**OTel:** Si ya existían servicios residuales de Jaeger (agent/collector/query), Helm fallaba al crear el all-in-one. **Fix:** eliminar namespace entero y reinstalar con `allInOne.enabled=true` y `collector/agent/query.enabled=false`.
 
 > **Qué significa:** OTel es el más rápido de lejos (~31 s sin cert-manager). EFK es rápido en deploy (~2 min) pero requiere configuración extra (ILM, templates). Loki es el más lento (~4 min) por el init container de Grafana que descarga plugins. **Para un equipo sin SRE, poder reinstalar todo en <5 minutos es tranquilizador.**
 
@@ -319,8 +311,6 @@ docker image inspect otel/opentelemetry-collector-contrib:0.110.0 --format='{{.S
 ---
 
 ## Limitaciones explícitas
-
-Declaramos aquí todo lo que NO pudimos medir como nos gustaría, para que la cátedra lo tenga presente:
 
 1. **No alcanzamos 24 h continuas de logs.** El cluster se reinició entre las mediciones originales (2026-05-08, 3 muestras a las 14:48, 15:50, 17:32) y las finales de la defensa (2026-05-10). La columna "Disco PVC tras ~24 h" refleja ~4 h de datos, no 24 h completas. Los valores de las 3 muestras originales se documentan en la nota de Métrica 1 (RAM: Loki 294±13 MiB, EFK 2104±8 MiB, OTel 114±5 MiB) y Métrica 2 (Loki 1.8 MiB → originalmente ~12 MiB tras 24 h reales).
 
