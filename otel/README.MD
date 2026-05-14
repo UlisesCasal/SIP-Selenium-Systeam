@@ -1,110 +1,69 @@
-# SD-2026 — SIP Selenium Systeam
+# OpenTelemetry Collector + SDK — TP 2 · Parte 3
 
-## Guía de Comandos
+Stack de observabilidad unificado con fan-out simultáneo a Loki y Elasticsearch.
 
-### 1. Preparación del Clúster
+## Prerrequisitos
 
-```bash
-k3d cluster create sobel --servers 1 --agents 2 -p "30002:30002@server:0"
+- Loki + Grafana en `observability` (TP 2 · Parte 1)
+- EFK en `elastic` (TP 2 · Parte 2)
+- Cluster k3d con 8+ GB RAM libre
 
-kubectl create namespace ml-scraper
-kubectl create namespace otel
-kubectl create namespace observability
-kubectl create namespace elastic
-kubectl create namespace elastic-system
-```
-
-### 2. Infraestructura y Almacenamiento
-
-```bash
-kubectl apply -f HIT7/k8s/pvc.yaml
-kubectl -n ml-scraper get pvc
-```
-
-### 3. Build y Despliegue del Scraper
-
-```bash
-docker build -t ml-scraper:otel-v24 .
-k3d image import ml-scraper:otel-v24 -c sobel
-
-kubectl apply -f HIT7/k8s/cronjob.yaml
-kubectl apply -f HIT7/k8s/configmap.yaml
-```
-
-### 4. Observabilidad
-
-#### EFK (Elasticsearch + Fluent Bit + Kibana)
-
-```bash
-cd efk
-chmod +x install.sh
-./install.sh
-# Kibana en https://localhost:30001
-```
-
-#### Loki + Promtail + Grafana
-
-```bash
-cd observability
-chmod +x install.sh
-./install.sh
-# Grafana en http://localhost:30000 (admin/prom-operator)
-```
-
-#### OpenTelemetry Collector + Jaeger
+## Instalación
 
 ```bash
 cd otel
 chmod +x install.sh
 ./install.sh
-
-# Jaeger UI
-kubectl port-forward -n otel svc/jaeger-ui 30002:16686
-# Abrir http://localhost:30002
 ```
 
-### 5. HIT8 — PostgreSQL
+## Verificar fan-out
 
 ```bash
-kubectl apply -f HIT8/k8s/postgres-secret.yaml
-kubectl apply -f HIT8/k8s/postgres-pvc.yaml
-kubectl apply -f HIT8/k8s/postgres-service.yaml
-kubectl apply -f HIT8/k8s/postgres-statefulset.yaml
-kubectl apply -f HIT8/k8s/migrations-configmap.yaml
-kubectl apply -f HIT8/k8s/configmap.yaml
-kubectl apply -f HIT8/k8s/cronjob.yaml
+# 1. Disparar un Job
+kubectl -n ml-scraper create job --from=cronjob/scraper-hourly verify-fanout
+
+# 2. Loki - buscar log_id
+# http://<node-ip>:30000 → Explore → {service="scraper"} | json
+
+# 3. Elasticsearch - mismo log_id
+# http://<node-ip>:30001 → Discover → scraper-logs-*
+
+# 4. Jaeger (bonus traces)
+# http://<node-ip>:30002
 ```
 
-### 6. Pruebas y Troubleshooting
+## Comandos útiles
 
 ```bash
-# Correr scraper manual
-kubectl -n ml-scraper create job --from=cronjob/scraper-hourly scraper-test-manual
-
-# Ver pods y logs
-kubectl -n ml-scraper get pods
-kubectl -n ml-scraper logs -f job/scraper-test-manual
-
-# Diagnóstico
-kubectl -n ml-scraper describe pod <nombre-del-pod>
-
 # Logs del collector
 kubectl -n otel logs daemonset/agent-collector --tail=50
 
-# Ver trazas en Jaeger via API
-curl "http://localhost:16686/api/services"
-curl "http://localhost:16686/api/traces?service=scraper-mercadolibre&limit=5"
+# Ver CRD del collector
+kubectl -n otel get otelcol
+
+# Verificar agentes legacy apagados
+kubectl -n observability get ds promtail
+kubectl -n elastic get ds fluent-bit
+
+# Disparar scraper manual para pruebas
+kubectl -n ml-scraper create job --from=cronjob/scraper-hourly scraper-test
+kubectl -n ml-scraper wait --for=condition=complete job/scraper-test --timeout=600s
 ```
 
-### Namespaces
+## Estructura
 
-| Namespace | Contenido |
-|-----------|-----------|
-| `ml-scraper` | CronJob scraper, ConfigMaps, PVC |
-| `sip-selenium` | HIT8: PostgreSQL, cronjob |
-| `observability` | Loki, Promtail, Grafana |
-| `elastic` | ES, Kibana, Fluent Bit |
-| `otel` | OTel Collector, Jaeger |
-| `elastic-system` | ECK Operator |
-| `otel-operator-system` | OTel Operator |
-| `cert-manager` | cert-manager |
+| Archivo | Descripción |
+|---------|-------------|
+| `install.sh` | Script de instalación idempotente |
+| `helm/otel-operator-values.yaml` | Values del OTel Operator |
+| `manifests/namespace.yaml` | Namespace `otel` |
+| `manifests/collector-agent.yaml` | CRD OpenTelemetryCollector (DaemonSet) |
+| `manifests/rbac.yaml` | ServiceAccount + ClusterRole |
+| `manifests/scraper-otlp-config.yaml` | ConfigMap con endpoint OTLP |
+| `scraper-instrumentation/otel_setup.py` | SDK OTel Python |
+| `screenshots/` | Capturas de cada hit |
+
+## Referencias
+
+- ADR 0010: `docs/adr/0010-instrumentacion-vendor-neutral.md`
+- ADR 0012: `docs/adr/0012-stack-de-observabilidad-final.md`
